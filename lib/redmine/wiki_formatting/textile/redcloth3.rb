@@ -255,7 +255,7 @@ class RedCloth3 < String
     #     #=>"<h1>A &lt;b&gt;bold&lt;/b&gt; man</h1>"
     #
     def initialize( string, restrictions = [] )
-        restrictions.each { |r| method( "#{r}=" ).call( true ) }
+        restrictions.each { |r| method( :"#{r}=" ).call( true ) }
         super( string )
     end
 
@@ -537,7 +537,7 @@ class RedCloth3 < String
                 # the regexp prevents wiki links with a | from being cut as cells
                 row.scan(/\|(_?#{S}#{A}#{C}\. ?)?((\[\[[^|\]]*\|[^|\]]*\]\]|[^|])*?)(?=\|)/o) do |modifiers, cell|
                     ctyp = 'd'
-                    ctyp = 'h' if modifiers && modifiers =~ /^_/
+                    ctyp = 'h' if modifiers&.start_with?('_')
 
                     catts = nil
                     catts = pba( modifiers, 'td' ) if modifiers
@@ -637,7 +637,7 @@ class RedCloth3 < String
     end
 
     def lT( text )
-        /\#$/.match?(text) ? 'o' : 'u'
+        text.end_with?('#') ? 'o' : 'u'
     end
 
     def hard_break( text )
@@ -673,7 +673,7 @@ class RedCloth3 < String
 
                     block_applied = 0
                     @rules.each do |rule_name|
-                        block_applied += 1 if rule_name.to_s.match /^block_/ and method(rule_name).call(blk)
+                        block_applied += 1 if rule_name.to_s.start_with?('block_') and method(rule_name).call(blk)
                     end
                     if block_applied.zero?
                         if deep_code
@@ -724,10 +724,10 @@ class RedCloth3 < String
 
             # pass to prefix handler
             replacement = nil
-            if respond_to? "textile_#{tag}", true
-              replacement = method( "textile_#{tag}" ).call( tag, atts, cite, content )
-            elsif respond_to? "textile_#{tagpre}_", true
-              replacement = method( "textile_#{tagpre}_" ).call( tagpre, num, atts, cite, content )
+            if respond_to? :"textile_#{tag}", true
+              replacement = method( :"textile_#{tag}" ).call( tag, atts, cite, content )
+            elsif respond_to? :"textile_#{tagpre}_", true
+              replacement = method( :"textile_#{tagpre}_" ).call( tagpre, num, atts, cite, content )
             end
             text.gsub!( $& ) { replacement } if replacement
         end
@@ -909,7 +909,7 @@ class RedCloth3 < String
 
     def refs( text )
         @rules.each do |rule_name|
-            method( rule_name ).call( text ) if rule_name.to_s.match? /^refs_/
+            method( rule_name ).call( text ) if rule_name.to_s.start_with?('refs_')
         end
     end
 
@@ -1042,7 +1042,7 @@ class RedCloth3 < String
     end
 
     def footnote_ref( text )
-        text.gsub!(/\b\[([0-9]+?)\](\s)?/,
+        text.gsub!(/(?<=[\p{Word}\]])\[([0-9]+?)\](\s)?/,
                    '<sup><a href="#fn\1">\1</a></sup>\2')
     end
 

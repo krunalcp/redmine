@@ -65,12 +65,14 @@ class Import < ActiveRecord::Base
 
   def set_default_settings(options={})
     separator = lu(user, :general_csv_separator)
+    wrapper = '"'
     encoding = lu(user, :general_csv_encoding)
     if file_exists?
       begin
         content = File.read(filepath, 256)
 
         separator = [',', ';'].max_by {|sep| content.count(sep)}
+        wrapper = ['"', "'"].max_by {|quote_char| content.count(quote_char)}
 
         guessed_encoding = Redmine::CodesetUtil.guess_encoding(content)
         encoding =
@@ -81,7 +83,6 @@ class Import < ActiveRecord::Base
       rescue => e
       end
     end
-    wrapper = '"'
 
     date_format = lu(user, "date.formats.default", :default => "foo")
     date_format = DATE_FORMATS.first unless DATE_FORMATS.include?(date_format)
@@ -183,7 +184,7 @@ class Import < ActiveRecord::Base
   def do_callbacks(position, object)
     if callbacks = (settings['callbacks'] || {}).delete(position)
       callbacks.each do |name, args|
-        send "#{name}_callback", object, *args
+        send :"#{name}_callback", object, *args
       end
       save!
     end

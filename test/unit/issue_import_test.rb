@@ -316,7 +316,7 @@ class IssueImportTest < ActiveSupport::TestCase
 
   def test_list_custom_field_should_be_set
     field = CustomField.find(1)
-    field.tracker_ids = Tracker.all.ids
+    field.tracker_ids = Tracker.ids
     field.save!
     import = generate_import_with_mapping
     import.mapping["cf_1"] = '8'
@@ -330,7 +330,7 @@ class IssueImportTest < ActiveSupport::TestCase
 
   def test_multiple_list_custom_field_should_be_set
     field = CustomField.find(1)
-    field.tracker_ids = Tracker.all.ids
+    field.tracker_ids = Tracker.ids
     field.multiple = true
     field.save!
     import = generate_import_with_mapping
@@ -461,6 +461,21 @@ class IssueImportTest < ActiveSupport::TestCase
       guessed_encoding = import.settings['encoding']
       assert_equal 'CP932', lu(user, :general_csv_encoding)
       assert_equal 'CP932', guessed_encoding
+    end
+  end
+
+  def test_set_default_settings_should_detect_field_wrapper
+    to_test = {
+      'import_issues.csv' => '"',
+      'import_issues_single_quotation.csv' => "'",
+      # Use '"' as a wrapper for CSV file with no wrappers
+      'import_dates.csv' => '"',
+    }
+
+    to_test.each do |file, expected|
+      import = generate_import(file)
+      import.set_default_settings
+      assert_equal expected, import.settings['wrapper']
     end
   end
 end

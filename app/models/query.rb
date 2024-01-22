@@ -30,7 +30,7 @@ class QueryColumn
     self.totalable = options[:totalable] || false
     self.default_order = options[:default_order]
     @inline = options.key?(:inline) ? options[:inline] : true
-    @caption_key = options[:caption] || "field_#{name}".to_sym
+    @caption_key = options[:caption] || :"field_#{name}"
     @frozen = options[:frozen]
   end
 
@@ -108,7 +108,7 @@ class QueryAssociationColumn < QueryColumn
   def initialize(association, attribute, options={})
     @association = association
     @attribute = attribute
-    name_with_assoc = "#{association}.#{attribute}".to_sym
+    name_with_assoc = :"#{association}.#{attribute}"
     super(name_with_assoc, options)
   end
 
@@ -126,7 +126,7 @@ end
 
 class QueryCustomFieldColumn < QueryColumn
   def initialize(custom_field, options={})
-    name = "cf_#{custom_field.id}".to_sym
+    name = :"cf_#{custom_field.id}"
     super(
       name,
       :sortable => custom_field.order_statement || false,
@@ -181,7 +181,7 @@ end
 class QueryAssociationCustomFieldColumn < QueryCustomFieldColumn
   def initialize(association, custom_field, options={})
     super(custom_field, options)
-    self.name = "#{association}.cf_#{custom_field.id}".to_sym
+    self.name = :"#{association}.cf_#{custom_field.id}"
     # TODO: support sorting by association custom field
     self.sortable = false
     self.groupable = false
@@ -211,7 +211,7 @@ class QueryFilter
   def initialize(field, options)
     @field = field.to_s
     @options = options
-    @options[:name] ||= l(options[:label] || "field_#{field}".gsub(/_id$/, ''))
+    @options[:name] ||= l(options[:label] || "field_#{field}".delete_suffix('_id'))
     # Consider filters with a Proc for values as remote by default
     @remote = options.key?(:remote) ? options[:remote] : options[:values].is_a?(Proc)
   end
@@ -257,8 +257,8 @@ class Query < ActiveRecord::Base
   has_and_belongs_to_many :roles, :join_table => "#{table_name_prefix}queries_roles#{table_name_suffix}", :foreign_key => "query_id"
   serialize :filters
   serialize :column_names
-  serialize :sort_criteria, Array
-  serialize :options, Hash
+  serialize :sort_criteria, type: Array
+  serialize :options, type: Hash
 
   validates_presence_of :name
   validates_length_of :name, :maximum => 255
@@ -589,7 +589,7 @@ class Query < ActiveRecord::Base
   end
 
   def subproject_values
-    project.descendants.visible.collect{|s| [s.name, s.id.to_s]}
+    project.descendants.visible.pluck(:name, :id).map {|name, id| [name, id.to_s]}
   end
 
   def principals
@@ -651,7 +651,7 @@ class Query < ActiveRecord::Base
     else
       statuses = IssueStatus.all.sorted
     end
-    statuses.collect{|s| [s.name, s.id.to_s]}
+    statuses.pluck(:name, :id).map {|name, id| [name, id.to_s]}
   end
 
   def watcher_values
@@ -996,7 +996,7 @@ class Query < ActiveRecord::Base
 
       if field == 'project_id' || (self.type == 'ProjectQuery' && %w[id parent_id].include?(field))
         if v.delete('mine')
-          v += User.current.memberships.map {|m| m.project_id.to_s}
+          v += User.current.memberships.pluck(:project_id).map(&:to_s)
         end
         if v.delete('bookmarks')
           v += User.current.bookmarked_project_ids
@@ -1110,7 +1110,7 @@ class Query < ActiveRecord::Base
       custom_field = column.custom_field
       send :total_for_custom_field, custom_field, scope
     else
-      send "total_for_#{column.name}", scope
+      send :"total_for_#{column.name}", scope
     end
   rescue ::ActiveRecord::StatementInvalid => e
     raise StatementInvalid.new(e.message)
@@ -1276,7 +1276,7 @@ class Query < ActiveRecord::Base
       sql += " OR #{db_table}.#{db_field} = ''" if is_custom_filter || [:text, :string].include?(type_for(field))
     when "*"
       sql = "#{db_table}.#{db_field} IS NOT NULL"
-      sql += " AND #{db_table}.#{db_field} <> ''" if is_custom_filter
+      sql += " AND #{db_table}.#{db_field} <> ''" if is_custom_filter || [:text, :string].include?(type_for(field))
     when ">="
       if [:date, :date_past].include?(type_for(field))
         sql = date_clause(db_table, db_field, parse_date(value.first), nil, is_custom_filter)
@@ -1631,7 +1631,7 @@ class Query < ActiveRecord::Base
       else
         from = from - 1 # second
       end
-      if self.class.default_timezone == :utc
+      if ActiveRecord.default_timezone == :utc
         from = from.utc
       end
       s << ("#{table}.#{field} > '%s'" % [quoted_time(from, is_custom_filter)])
@@ -1640,7 +1640,7 @@ class Query < ActiveRecord::Base
       if to.is_a?(Date)
         to = date_for_user_time_zone(to.year, to.month, to.day).end_of_day
       end
-      if self.class.default_timezone == :utc
+      if ActiveRecord.default_timezone == :utc
         to = to.utc
       end
       s << ("#{table}.#{field} <= '%s'" % [quoted_time(to, is_custom_filter)])

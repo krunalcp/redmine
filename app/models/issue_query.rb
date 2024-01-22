@@ -97,7 +97,7 @@ class IssueQuery < Query
   end
 
   def initialize(attributes=nil, *args)
-    super attributes
+    super(attributes)
     self.filters ||= {'status_id' => {:operator => "o", :values => [""]}}
   end
 
@@ -159,7 +159,8 @@ class IssueQuery < Query
     )
     add_available_filter(
       "priority_id",
-      :type => :list_with_history, :values => IssuePriority.all.collect{|s| [s.name, s.id.to_s]}
+      :type => :list_with_history,
+      :values => IssuePriority.pluck(:name, :id).map {|name, id| [name, id.to_s]}
     )
     add_available_filter(
       "author_id",
@@ -171,11 +172,13 @@ class IssueQuery < Query
     )
     add_available_filter(
       "member_of_group",
-      :type => :list_optional, :values => lambda {Group.givable.visible.collect {|g| [g.name, g.id.to_s]}}
+      :type => :list_optional,
+      :values => lambda {Group.givable.visible.pluck(:name, :id).map {|name, id| [name, id.to_s]}}
     )
     add_available_filter(
       "assigned_to_role",
-      :type => :list_optional, :values => lambda {Role.givable.collect {|r| [r.name, r.id.to_s]}}
+      :type => :list_optional,
+      :values => lambda {Role.givable.pluck(:name, :id).map {|name, id| [name, id.to_s]}}
     )
     add_available_filter(
       "fixed_version_id",
@@ -195,7 +198,7 @@ class IssueQuery < Query
     add_available_filter(
       "category_id",
       :type => :list_optional_with_history,
-      :values => lambda {project.issue_categories.collect{|s| [s.name, s.id.to_s]}}
+      :values => lambda {project.issue_categories.pluck(:name, :id).map {|name, id| [name, id.to_s]}}
     ) if project
     add_available_filter "subject", :type => :text
     add_available_filter "description", :type => :text
@@ -325,7 +328,7 @@ class IssueQuery < Query
                         :sortable => "#{Issue.table_name}.is_private", :groupable => true)
     end
 
-    disabled_fields = Tracker.disabled_core_fields(trackers).map {|field| field.sub(/_id$/, '')}
+    disabled_fields = Tracker.disabled_core_fields(trackers).map {|field| field.delete_suffix('_id')}
     disabled_fields << "total_estimated_hours" if disabled_fields.include?("estimated_hours")
     @available_columns.reject! do |column|
       disabled_fields.include?(column.name.to_s)
@@ -476,9 +479,9 @@ class IssueQuery < Query
   def sql_for_notes_field(field, operator, value)
     subquery = "SELECT 1 FROM #{Journal.table_name}" +
       " WHERE #{Journal.table_name}.journalized_type='Issue' AND #{Journal.table_name}.journalized_id=#{Issue.table_name}.id" +
-      " AND (#{sql_for_field field, operator.sub(/^!/, ''), value, Journal.table_name, 'notes'})" +
+      " AND (#{sql_for_field field, operator.delete_prefix('!'), value, Journal.table_name, 'notes'})" +
       " AND (#{Journal.visible_notes_condition(User.current, :skip_pre_condition => true)})"
-    "#{/^!/.match?(operator) ? "NOT EXISTS" : "EXISTS"} (#{subquery})"
+    "#{operator.start_with?('!') ? "NOT EXISTS" : "EXISTS"} (#{subquery})"
   end
 
   def sql_for_updated_by_field(field, operator, value)
@@ -566,8 +569,12 @@ class IssueQuery < Query
     when "*", "!*" # Member / Not member
       sw = operator == "!*" ? 'NOT' : ''
       nl = operator == "!*" ? "#{Issue.table_name}.assigned_to_id IS NULL OR" : ''
-      "(#{nl} #{Issue.table_name}.assigned_to_id #{sw} IN (SELECT DISTINCT #{Member.table_name}.user_id FROM #{Member.table_name}" +
-        " WHERE #{Member.table_name}.project_id = #{Issue.table_name}.project_id))"
+
+      subquery =
+        "SELECT 1" +
+        " FROM #{Member.table_name}" +
+        " WHERE #{Issue.table_name}.project_id = #{Member.table_name}.project_id AND #{Member.table_name}.user_id = #{Issue.table_name}.assigned_to_id"
+      "(#{nl} #{sw} EXISTS (#{subquery}))"
     when "=", "!"
       role_cond =
         if value.any?
@@ -577,8 +584,11 @@ class IssueQuery < Query
         end
       sw = operator == "!" ? 'NOT' : ''
       nl = operator == "!" ? "#{Issue.table_name}.assigned_to_id IS NULL OR" : ''
-      "(#{nl} #{Issue.table_name}.assigned_to_id #{sw} IN (SELECT DISTINCT #{Member.table_name}.user_id FROM #{Member.table_name}, #{MemberRole.table_name}" +
-        " WHERE #{Member.table_name}.project_id = #{Issue.table_name}.project_id AND #{Member.table_name}.id = #{MemberRole.table_name}.member_id AND #{role_cond}))"
+      subquery =
+        "SELECT 1" +
+        " FROM #{Member.table_name} inner join #{MemberRole.table_name} on members.id = member_roles.member_id" +
+        " WHERE #{Issue.table_name}.project_id = #{Member.table_name}.project_id AND #{Member.table_name}.user_id = #{Issue.table_name}.assigned_to_id AND #{role_cond}"
+      "(#{nl} #{sw} EXISTS (#{subquery}))"
     end
   end
 
@@ -652,9 +662,18 @@ class IssueQuery < Query
         "1=0"
       end
     when "~"
-      root_id, lft, rgt = Issue.where(:id => value.first.to_i).pick(:root_id, :lft, :rgt)
-      if root_id && lft && rgt
-        "#{Issue.table_name}.root_id = #{root_id} AND #{Issue.table_name}.lft > #{lft} AND #{Issue.table_name}.rgt < #{rgt}"
+      ids = value.first.to_s.scan(/\d+/).map(&:to_i).uniq
+      conditions = ids.filter_map do |id|
+        root_id, lft, rgt = Issue.where(id: id).pick(:root_id, :lft, :rgt)
+        if root_id && lft && rgt
+          "(#{Issue.table_name}.root_id = #{root_id} AND #{Issue.table_name}.lft > #{lft} AND #{Issue.table_name}.rgt < #{rgt})"
+        else
+          nil
+        end
+      end
+
+      if conditions.any?
+        "(#{conditions.join(' OR ')})"
       else
         "1=0"
       end
@@ -830,7 +849,7 @@ class IssueQuery < Query
   alias :find_author_id_filter_values :find_assigned_to_id_filter_values
 
   IssueRelation::TYPES.each_key do |relation_type|
-    alias_method "sql_for_#{relation_type}_field".to_sym, :sql_for_relations
+    alias_method :"sql_for_#{relation_type}_field", :sql_for_relations
   end
 
   def joins_for_order_statement(order_options)

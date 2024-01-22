@@ -1,5 +1,8 @@
-/* Redmine - project management software
-   Copyright (C) 2006-2023  Jean-Philippe Lang */
+/**
+ * Redmine - project management software
+ * Copyright (C) 2006-2023  Jean-Philippe Lang
+ * This code is released under the GNU General Public License.
+ */
 
 function addFile(inputEl, file, eagerUpload) {
   var attachmentsFields = $(inputEl).closest('.attachments_form').find('.attachments_fields');

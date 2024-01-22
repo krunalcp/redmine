@@ -1,3 +1,9 @@
+/**
+ * Redmine - project management software
+ * Copyright (C) 2006-2023  Jean-Philippe Lang
+ * This code is released under the GNU General Public License.
+ */
+
 // generic layout specific responsive stuff goes here
 
 function openFlyout() {

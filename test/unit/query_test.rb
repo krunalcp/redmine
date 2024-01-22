@@ -214,7 +214,7 @@ class QueryTest < ActiveSupport::TestCase
     assert issues.all? {|i| i.custom_field_value(2).blank?}
   end
 
-  def test_operator_none_for_text
+  def test_operator_none_for_blank_text
     query = IssueQuery.new(:name => '_')
     query.add_filter('status_id', '*', [''])
     query.add_filter('description', '!*', [''])
@@ -224,6 +224,19 @@ class QueryTest < ActiveSupport::TestCase
     assert issues.any?
     assert issues.all? {|i| i.description.blank?}
     assert_equal [11, 12], issues.map(&:id).sort
+  end
+
+  def test_operator_any_for_blank_text
+    Issue.where(id: [1, 2]).update_all(description: '')
+    query = IssueQuery.new(:name => '_')
+    query.add_filter('status_id', '*', [''])
+    query.add_filter('description', '*', [''])
+    assert query.has_filter?('description')
+    issues = find_issues_with_query(query)
+
+    assert issues.any?
+    assert issues.all? {|i| i.description.present?}
+    assert_empty issues.map(&:id) & [1, 2]
   end
 
   def test_operator_all
@@ -860,7 +873,7 @@ class QueryTest < ActiveSupport::TestCase
       }
     )
     result = find_issues_with_query(query)
-    expected = Issue.all.order(:id).ids - [8, 11, 12]
+    expected = Issue.order(:id).ids - [8, 11, 12]
     assert_equal expected, result.map(&:id).sort
   end
 
@@ -1549,13 +1562,13 @@ class QueryTest < ActiveSupport::TestCase
     query = IssueQuery.new(:name => '_')
     filter_name = "fixed_version.due_date"
     assert_include filter_name, query.available_filters.keys
-    query.filters = {filter_name => {:operator => '=', :values => [20.day.from_now.to_date.to_s(:db)]}}
+    query.filters = {filter_name => {:operator => '=', :values => [20.day.from_now.to_date.to_fs(:db)]}}
     issues = find_issues_with_query(query)
     assert_equal [2], issues.map(&:fixed_version_id).uniq.sort
     assert_equal [2, 12], issues.map(&:id).sort
 
     query = IssueQuery.new(:name => '_')
-    query.filters = {filter_name => {:operator => '>=', :values => [21.day.from_now.to_date.to_s(:db)]}}
+    query.filters = {filter_name => {:operator => '>=', :values => [21.day.from_now.to_date.to_fs(:db)]}}
     assert_equal 0, find_issues_with_query(query).size
   end
 
@@ -1817,6 +1830,31 @@ class QueryTest < ActiveSupport::TestCase
 
     query.filters = {"parent_id" => {:operator => '~', :values => '99999999999'}}
     assert_equal [], find_issues_with_query(query)
+  end
+
+  def test_operator_contains_on_parent_id_should_accept_comma_separated_values
+    parent1 = Issue.generate!
+    children_of_parent1 = [
+      Issue.generate!(parent_id: parent1.id),
+      Issue.generate!(parent_id: parent1.id)
+    ]
+    parent2 = Issue.generate!
+    children_of_parent2 = [
+      Issue.generate!(parent_id: parent2.id),
+      Issue.generate!(parent_id: parent2.id)
+    ]
+    grandchild_of_parent2 = [
+      Issue.generate!(parent_id: children_of_parent2.first.id)
+    ]
+
+    query = IssueQuery.new(name: '_')
+    query.add_filter('parent_id', '~', ["#{parent1.id},#{parent2.id}"])
+    issues = find_issues_with_query(query)
+
+    expected =
+      children_of_parent1 + children_of_parent2 + grandchild_of_parent2
+    assert_equal expected.size, issues.size
+    assert_equal expected.map(&:id).sort, issues.map(&:id).sort
   end
 
   def test_filter_on_child
@@ -2099,7 +2137,7 @@ class QueryTest < ActiveSupport::TestCase
         :field_format => 'user'
       )
     q = IssueQuery.new
-    assert q.groupable_columns.detect {|c| c.name == "cf_#{cf.id}".to_sym}
+    assert q.groupable_columns.detect {|c| c.name == :"cf_#{cf.id}"}
   end
 
   def test_groupable_columns_should_include_version_custom_fields
@@ -2109,7 +2147,7 @@ class QueryTest < ActiveSupport::TestCase
         :tracker_ids => [1], :field_format => 'version'
       )
     q = IssueQuery.new
-    assert q.groupable_columns.detect {|c| c.name == "cf_#{cf.id}".to_sym}
+    assert q.groupable_columns.detect {|c| c.name == :"cf_#{cf.id}"}
   end
 
   def test_grouped_with_valid_column
@@ -2360,13 +2398,13 @@ class QueryTest < ActiveSupport::TestCase
   def test_available_totalable_columns_should_include_int_custom_field
     field = IssueCustomField.generate!(:field_format => 'int', :is_for_all => true)
     q = IssueQuery.new
-    assert_include "cf_#{field.id}".to_sym, q.available_totalable_columns.map(&:name)
+    assert_include :"cf_#{field.id}", q.available_totalable_columns.map(&:name)
   end
 
   def test_available_totalable_columns_should_include_float_custom_field
     field = IssueCustomField.generate!(:field_format => 'float', :is_for_all => true)
     q = IssueQuery.new
-    assert_include "cf_#{field.id}".to_sym, q.available_totalable_columns.map(&:name)
+    assert_include :"cf_#{field.id}", q.available_totalable_columns.map(&:name)
   end
 
   def test_available_totalable_columns_should_sort_in_position_order_for_custom_field
@@ -2962,7 +3000,7 @@ class QueryTest < ActiveSupport::TestCase
     User.current.pref.update_attribute :time_zone, 'Hawaii'
 
     # assume timestamps are stored as utc
-    ActiveRecord::Base.default_timezone = :utc
+    ActiveRecord.default_timezone = :utc
 
     from = Date.parse '2016-03-20'
     to = Date.parse '2016-03-22'
@@ -2973,7 +3011,7 @@ class QueryTest < ActiveSupport::TestCase
     t = Time.new(2016, 3, 23, 9, 59, 59, 0).end_of_hour
     assert_equal "table.field > '#{Query.connection.quoted_date f}' AND table.field <= '#{Query.connection.quoted_date t}'", c
   ensure
-    ActiveRecord::Base.default_timezone = :local # restore Redmine default
+    ActiveRecord.default_timezone = :local # restore Redmine default
   end
 
   def test_project_statement_with_closed_subprojects

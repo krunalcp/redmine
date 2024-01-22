@@ -142,8 +142,10 @@ class Journal < ActiveRecord::Base
   end
 
   def attachments
-    ids = details.select {|d| d.property == 'attachment' && d.value.present?}.map(&:prop_key)
-    Attachment.where(id: ids).sort_by {|a| ids.index(a.id.to_s)}
+    @attachments ||= begin
+      ids = details.select {|d| d.property == 'attachment' && d.value.present?}.map(&:prop_key)
+      ids.empty? ? [] : Attachment.where(id: ids).sort_by {|a| ids.index(a.id.to_s)}
+    end
   end
 
   def visible?(*args)
@@ -264,7 +266,7 @@ class Journal < ActiveRecord::Base
     # custom fields changes
     if @custom_values_before_change
       values_by_custom_field_id = {}
-      @custom_values_before_change.each do |custom_field_id, value|
+      @custom_values_before_change.each_key do |custom_field_id|
         values_by_custom_field_id[custom_field_id] = nil
       end
       journalized.custom_field_values.each do |c|

@@ -2,7 +2,7 @@ inherit_from: .rubocop_todo.yml
 
 AllCops:
   TargetRubyVersion: 2.7
-  TargetRailsVersion: 6.1
+  TargetRailsVersion: 7.1
 
   NewCops: enable
 
@@ -146,6 +146,9 @@ Rails/EnvironmentVariableAccess:
 Rails/FilePath:
   Enabled: false
 
+Rails/FindEach:
+  Enabled: false
+
 Rails/HelperInstanceVariable:
   Enabled: false
 
@@ -218,10 +221,18 @@ Style/GlobalStdStream:
 Style/HashSyntax:
   EnforcedStyle: no_mixed_keys
 
+Style/HashEachMethods:
+  Exclude:
+    - 'db/migrate/072_add_enumerations_position.rb'
+    - 'db/migrate/078_add_custom_fields_position.rb'
+
 Style/IdenticalConditionalBranches:
   Exclude:
     - 'config/initializers/10-patches.rb'
     - 'lib/redmine/wiki_formatting/textile/redcloth3.rb'
+
+Style/InverseMethods:
+  Enabled: false
 
 Style/NegatedIfElseCondition:
   Enabled: false
@@ -232,6 +243,9 @@ Style/RaiseArgs:
 Style/RedundantConstantBase:
   Exclude:
     - 'config/environments/production.rb'
+
+Style/RedundantParentheses:
+  Enabled: false
 
 Style/Semicolon:
   Enabled: false

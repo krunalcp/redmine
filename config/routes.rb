@@ -299,12 +299,13 @@ Rails.application.routes.draw do
 
   get "projects/:id/repository/:repository_id/revisions/:rev/diff(/*path)",
       :to => 'repositories#diff',
-      :format => false,
-      :constraints => {:rev => /[a-z0-9\.\-_]+/, :path => /.*/}
+      :format => 'html',
+      :constraints => {:rev => /[a-z0-9\.\-_]+/, :path => /.*/, :format => /(html|diff)/ }
+
   get "projects/:id/repository/:repository_id/diff(/*path)",
       :to => 'repositories#diff',
-      :format => false,
-      :constraints => {:path => /.*/}
+      :format => 'html',
+      :constraints => {:path => /.*/, :format => /(html|diff)/ }
 
   get 'projects/:id/repository/:repository_id/show/*path', :to => 'repositories#show', :format => 'html', :constraints => {:path => /.*/}
 
@@ -317,7 +318,9 @@ Rails.application.routes.draw do
   get 'attachments/download/:id', :to => 'attachments#download', :id => /\d+/
   get 'attachments/thumbnail/:id(/:size)', :to => 'attachments#thumbnail', :id => /\d+/, :size => /\d+/, :as => 'thumbnail'
   resources :attachments, :only => [:show, :update, :destroy]
-  constraints object_type: /(issues|versions|news|messages|wiki_pages|projects|documents|journals)/ do
+
+  # register plugin object types with ObjectTypeConstraint.register_object_type(PluginModel.name.underscore.pluralize')
+  constraints Redmine::Acts::Attachable::ObjectTypeConstraint do
     get 'attachments/:object_type/:object_id/edit', :to => 'attachments#edit_all', :as => :object_attachments_edit
     patch 'attachments/:object_type/:object_id', :to => 'attachments#update_all', :as => :object_attachments
     get 'attachments/:object_type/:object_id/download', :to => 'attachments#download_all', :as => :object_attachments_download
@@ -404,15 +407,11 @@ Rails.application.routes.draw do
 
   get 'robots', :to => 'welcome#robots'
 
-  Dir.glob File.expand_path("#{Redmine::Plugin.directory}/*") do |plugin_dir|
-    file = File.join(plugin_dir, "config/routes.rb")
-    if File.exist?(file)
-      begin
-        instance_eval File.read(file)
-      rescue SyntaxError, StandardError => e
-        puts "An error occurred while loading the routes definition of #{File.basename(plugin_dir)} plugin (#{file}): #{e.message}."
-        exit 1
-      end
-    end
+  Redmine::Plugin.directory.glob("*/config/routes.rb").sort.each do |plugin_routes_path|
+    instance_eval(plugin_routes_path.read, plugin_routes_path.to_s)
+  rescue SyntaxError, StandardError => e
+    plugin_name = plugin_routes_path.parent.parent.basename.to_s
+    puts "An error occurred while loading the routes definition of #{plugin_name} plugin (#{plugin_routes_path}): #{e.message}."
+    exit 1
   end
 end

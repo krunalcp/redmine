@@ -4,7 +4,7 @@ module ActiveRecord
   class Base
     # Translate attribute names for validation errors display
     def self.human_attribute_name(attr, options = {})
-      prepared_attr = attr.to_s.sub(/_id$/, '').sub(/^.+\./, '')
+      prepared_attr = attr.to_s.delete_suffix('_id').sub(/^.+\./, '')
       class_prefix = name.underscore.tr('/', '_')
 
       redmine_default = [
@@ -47,20 +47,6 @@ module ActionView
       end
     end
   end
-
-  class Resolver
-    def find_all(name, prefix=nil, partial=false, details={}, key=nil, locals=[])
-      locals = locals.map(&:to_s).sort!.freeze
-
-      cached(key, [name, prefix, partial], details, locals) do
-        if (details[:formats] & [:xml, :json]).any?
-          details = details.dup
-          details[:formats] = details[:formats].dup + [:api]
-        end
-        _find_all(name, prefix, partial, details, key, locals)
-      end
-    end
-  end
 end
 
 ActionView::Base.field_error_proc = Proc.new{ |html_tag, instance| html_tag || ''.html_safe }
@@ -69,17 +55,14 @@ ActionView::Base.field_error_proc = Proc.new{ |html_tag, instance| html_tag || '
 module ActionView
   module Helpers
     module Tags
-      class Base
-        private
-        alias :add_options_without_non_empty_blank_option :add_options
+      SelectRenderer.prepend(Module.new do
         def add_options(option_tags, options, value = nil)
-          if options[:include_blank] == true
-            options = options.dup
-            options[:include_blank] = '&nbsp;'.html_safe
+          if options.delete(:include_blank)
+            options[:prompt] = '&nbsp;'.html_safe
           end
-          add_options_without_non_empty_blank_option(option_tags, options, value)
+          super
         end
-      end
+      end)
     end
 
     module FormHelper
@@ -156,6 +139,31 @@ module ActionController
   end
 end
 
+module ActionView
+  LookupContext.prepend(Module.new do
+    def formats=(values)
+      if (Array(values) & [:xml, :json]).any?
+        values << :api
+      end
+      super(values)
+    end
+  end)
+end
+
+module ActionController
+  Base.prepend(Module.new do
+    def rendered_format
+      if lookup_context.formats.first == :api
+        return request.format
+      end
+
+      super
+    end
+  end)
+end
+
+Mime::SET << 'api'
+
 # Adds asset_id parameters to assets like Rails 3 to invalidate caches in browser
 module ActionView
   module Helpers
@@ -202,20 +210,6 @@ module ActionView
             asset_id
           end
         end
-      end
-    end
-  end
-end
-
-# https://github.com/rack/rack/pull/1703
-# TODO: remove this when Rack is updated to 3.0.0
-require 'rack'
-module Rack
-  class RewindableInput
-    unless method_defined?(:size)
-      def size
-        make_rewindable unless @rewindable_io
-        @rewindable_io.size
       end
     end
   end

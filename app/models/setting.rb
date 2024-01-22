@@ -169,7 +169,7 @@ class Setting < ActiveRecord::Base
        /\s*,\s*/]
     ].each do |enable_regex, regex_field, delimiter|
       if settings.key?(regex_field) || settings.key?(enable_regex)
-        regexp = Setting.send("#{enable_regex}?")
+        regexp = Setting.send(:"#{enable_regex}?")
         if settings.key?(enable_regex)
           regexp = settings[enable_regex].to_s != '0'
         end
@@ -187,7 +187,7 @@ class Setting < ActiveRecord::Base
     if settings.key?(:mail_from)
       begin
         mail_from = Mail::Address.new(settings[:mail_from])
-        raise unless EmailAddress::EMAIL_REGEXP.match?(mail_from.address)
+        raise unless URI::MailTo::EMAIL_REGEXP.match?(mail_from.address)
       rescue
         messages << [:mail_from, l('activerecord.errors.messages.invalid')]
       end

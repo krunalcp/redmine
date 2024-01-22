@@ -367,9 +367,9 @@ module Redmine
         @children.inject(1) {|sum, node| sum + node.size}
       end
 
-      def each(&block)
+      def each(...)
         yield self
-        children {|child| child.each(&block)}
+        children {|child| child.each(...)}
       end
 
       # Adds a child at first position
@@ -453,7 +453,7 @@ module Redmine
         @parent = options[:parent]
         @child_menus = options[:children]
         @last = options[:last] || false
-        super @name.to_sym
+        super(@name.to_sym)
       end
 
       def caption(project=nil)

@@ -28,6 +28,14 @@ class Mailer < ActionMailer::Base
   include Redmine::I18n
   include Roadie::Rails::Automatic
 
+  class DeliveryJob < ActionMailer::MailDeliveryJob
+    include Redmine::JobWrapper
+
+    around_enqueue :keep_current_user
+  end
+
+  self.delivery_job = DeliveryJob
+
   # Overrides ActionMailer::Base#process in order to set the recipient as the current user
   # and his language as the default locale.
   # The first argument of all actions of this Mailer must be a User (the recipient),
@@ -612,7 +620,7 @@ class Mailer < ActionMailer::Base
     scope = scope.where(:tracker_id => tracker.id) if tracker
     issues_by_assignee = scope.includes(:status, :assigned_to, :project, :tracker).
                               group_by(&:assigned_to)
-    issues_by_assignee.keys.each do |assignee|
+    issues_by_assignee.keys.each do |assignee|  # rubocop:disable Style/HashEachMethods
       if assignee.is_a?(Group)
         assignee.users.each do |user|
           issues_by_assignee[user] ||= []
@@ -706,9 +714,9 @@ class Mailer < ActionMailer::Base
     end
 
     if block
-      super headers, &block
+      super(headers, &block)
     else
-      super headers do |format|
+      super(headers) do |format|
         format.text
         format.html unless Setting.plain_text_mail?
       end

@@ -21,6 +21,8 @@ require 'redmine'
 
 module Redmine
   module I18n
+    include ActionView::Helpers::NumberHelper
+
     def self.included(base)
       base.extend Redmine::I18n
     end
@@ -43,7 +45,7 @@ module Redmine
     end
 
     def l_or_humanize(s, options={})
-      k = "#{options[:prefix]}#{s}".to_sym
+      k = :"#{options[:prefix]}#{s}"
       ::I18n.t(k, :default => s.to_s.humanize)
     end
 
@@ -95,8 +97,20 @@ module Redmine
         m = ((hours - h) * 60).round
         "%d:%02d" % [h, m]
       else
-        "%.2f" % hours.to_f
+        number_with_delimiter(sprintf('%.2f', hours.to_f), delimiter: nil)
       end
+    end
+
+    # Will consider language specific separator in user input
+    # and normalize them to a unified format to be accepted by Kernel.Float().
+    #
+    # @param value [String] A string represenation of a float value.
+    #
+    # @note The delimiter cannot be used here if it is a decimal point since it
+    #       will clash with the dot separator.
+    def normalize_float(value)
+      separator = ::I18n.t('number.format.separator')
+      value.gsub(/[#{separator}]/, separator => '.')
     end
 
     def day_name(day)

@@ -208,7 +208,7 @@ module IssuesHelper
         if manage_relations
           link_to(
             l(:label_relation_delete),
-            relation_path(relation),
+            relation_path(relation, issue_id: issue.id),
             :remote => true,
             :method => :delete,
             :data => {:confirm => l(:text_are_you_sure)},
@@ -528,8 +528,8 @@ module IssuesHelper
 
     case detail.property
     when 'attr'
-      field = detail.prop_key.to_s.gsub(/\_id$/, "")
-      label = l(("field_" + field).to_sym)
+      field = detail.prop_key.to_s.delete_suffix('_id')
+      label = l(("field_#{field}").to_sym)
       case detail.prop_key
       when 'due_date', 'start_date'
         value = format_date(detail.value.to_date) if detail.value

@@ -203,6 +203,11 @@ class ActiveSupport::TestCase
     Redmine::Database.mysql?
   end
 
+  def mysql8?
+    version = Redmine::Database.mysql_version.sub(/^(\d+\.\d+\.\d+).*/, '\1')
+    Gem::Version.new(version) >= Gem::Version.new('8.0.0')
+  end
+
   def postgresql?
     Redmine::Database.postgresql?
   end
@@ -485,7 +490,7 @@ module Redmine
 
         API_FORMATS.each do |format|
           format_request = request.sub /$/, ".#{format}"
-          super options.merge(format_request => arg[request], :format => format)
+          super(options.merge(format_request => arg[request], :format => format))
         end
       end
     end

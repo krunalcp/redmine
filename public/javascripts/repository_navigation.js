@@ -1,8 +1,11 @@
-/* Redmine - project management software
-   Copyright (C) 2006-2023  Jean-Philippe Lang */
+/**
+ * Redmine - project management software
+ * Copyright (C) 2006-2023  Jean-Philippe Lang
+ * This code is released under the GNU General Public License.
+ */
 
 $(document).ready(function() {
-  /* 
+  /*
   If we're viewing a tag or branch, don't display it in the
   revision box
   */
@@ -12,7 +15,7 @@ $(document).ready(function() {
     $('#rev').val('');
   }
 
-  /* 
+  /*
   Copy the branch/tag value into the revision box, then disable
   the dropdowns before submitting the form
   */

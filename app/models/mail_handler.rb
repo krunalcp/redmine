@@ -376,7 +376,7 @@ class MailHandler < ActionMailer::Base
   # Adds To and Cc as watchers of the given object if the sender has the
   # appropriate permission
   def add_watchers(obj)
-    if handler_options[:no_permission_check] || user.allowed_to?("add_#{obj.class.name.underscore}_watchers".to_sym, obj.project)
+    if handler_options[:no_permission_check] || user.allowed_to?(:"add_#{obj.class.name.underscore}_watchers", obj.project)
       addresses = [email.to, email.cc].flatten.compact.uniq.collect {|a| a.strip.downcase}
       unless addresses.empty?
         users = User.active.having_mail(addresses).to_a
@@ -578,7 +578,7 @@ class MailHandler < ActionMailer::Base
   def self.assign_string_attribute_with_limit(object, attribute, value, limit=nil)
     limit ||= object.class.columns_hash[attribute.to_s].limit || 255
     value = value.to_s.slice(0, limit)
-    object.send("#{attribute}=", value)
+    object.send(:"#{attribute}=", value)
   end
   private_class_method :assign_string_attribute_with_limit
 
@@ -615,7 +615,7 @@ class MailHandler < ActionMailer::Base
       unless user.valid?
         user.login = "user#{Redmine::Utils.random_hex(6)}" unless user.errors[:login].blank?
         user.firstname = "-" unless user.errors[:firstname].blank?
-        (puts user.errors[:lastname]; user.lastname  = "-") unless user.errors[:lastname].blank?
+        user.lastname  = "-" unless user.errors[:lastname].blank?
       end
       user
     end

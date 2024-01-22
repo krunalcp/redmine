@@ -259,14 +259,14 @@ module ApplicationHelper
     when Array
       formatted_objects = object.map {|o| format_object(o, html)}
       html ? safe_join(formatted_objects, ', ') : formatted_objects.join(', ')
-    when Time
+    when Time, ActiveSupport::TimeWithZone
       format_time(object)
     when Date
       format_date(object)
     when Integer
       object.to_s
     when Float
-      sprintf "%.2f", object
+      number_with_delimiter(sprintf('%.2f', object), delimiter: nil)
     when User, Group
       html ? link_to_principal(object) : object.to_s
     when Project
@@ -634,7 +634,7 @@ module ApplicationHelper
                  'span', nil,
                  :class => "name icon icon-#{principal.class.name.downcase}"
                )
-            ) + principal
+            ) + principal.to_s
         )
     end
     s.html_safe
@@ -684,7 +684,7 @@ module ApplicationHelper
 
   def html_hours(text)
     text.gsub(
-      %r{(\d+)([\.:])(\d+)},
+      %r{(\d+)([\.,:])(\d+)},
       '<span class="hours hours-int">\1</span><span class="hours hours-dec">\2\3</span>'
     ).html_safe
   end
@@ -1474,7 +1474,7 @@ module ApplicationHelper
   end
 
   def lang_options_for_select(blank=true)
-    (blank ? [["(auto)", ""]] : []) + languages_options
+    (blank ? [["(#{l('label_option_auto_lang')})", ""]] : []) + languages_options
   end
 
   def labelled_form_for(*args, &proc)
@@ -1503,7 +1503,7 @@ module ApplicationHelper
 
   # Render the error messages for the given objects
   def error_messages_for(*objects)
-    objects = objects.filter_map {|o| o.is_a?(String) ? instance_variable_get("@#{o}") : o}
+    objects = objects.filter_map {|o| o.is_a?(String) ? instance_variable_get(:"@#{o}") : o}
     errors = objects.map {|o| o.errors.full_messages}.flatten
     render_error_messages(errors)
   end
@@ -1675,7 +1675,7 @@ module ApplicationHelper
         source
       end
     end
-    super *sources, options
+    super(*sources, options)
   end
 
   # Overrides Rails' image_tag with themes and plugins support.
@@ -1689,7 +1689,7 @@ module ApplicationHelper
     elsif current_theme && current_theme.images.include?(source)
       source = current_theme.image_path(source)
     end
-    super source, options
+    super(source, options)
   end
 
   # Overrides Rails' javascript_include_tag with plugins support
@@ -1708,7 +1708,7 @@ module ApplicationHelper
         end
       end
     end
-    super *sources, options
+    super(*sources, options)
   end
 
   def sidebar_content?
@@ -1730,7 +1730,7 @@ module ApplicationHelper
   # Returns the javascript tags that are included in the html layout head
   def javascript_heads
     tags = javascript_include_tag(
-      'jquery-3.6.1-ui-1.13.2-ujs-6.1.7',
+      'jquery-3.6.1-ui-1.13.2-ujs-7.1.2',
       'tribute-5.1.3.min',
       'tablesort-5.2.1.min.js',
       'tablesort-5.2.1.number.min.js',
@@ -1805,6 +1805,23 @@ module ApplicationHelper
     end
   end
 
+  def export_csv_separator_select_tag
+    options = [[l(:label_comma_char), ','], [l(:label_semi_colon_char), ';']]
+    # Add the separator from translations if it is missing
+    general_csv_separator = l(:general_csv_separator)
+    unless options.index { |option| option.last == general_csv_separator }
+      options << Array.new(2, general_csv_separator)
+    end
+    content_tag(:p) do
+      concat(
+        content_tag(:label) do
+          concat l(:label_fields_separator) + ' '
+          concat select_tag('field_separator', options_for_select(options, general_csv_separator))
+        end
+      )
+    end
+  end
+
   # Returns an array of error messages for bulk edited items (issues, time entries)
   def bulk_edit_error_messages(items)
     messages = {}
@@ -1820,6 +1837,10 @@ module ApplicationHelper
   end
 
   def render_if_exist(options = {}, locals = {}, &block)
+    # Remove test_render_if_exist_should_be_render_partial and test_render_if_exist_should_be_render_nil
+    # along with this method in Redmine 7.0
+    ActiveSupport::Deprecation.warn 'ApplicationHelper#render_if_exist is deprecated and will be removed in Redmine 7.0.'
+
     if options[:partial]
       if lookup_context.exists?(options[:partial], lookup_context.prefixes, true)
         render(options, locals, &block)

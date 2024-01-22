@@ -2171,6 +2171,17 @@ class ApplicationHelperTest < Redmine::HelperTest
     end
   end
 
+  def test_format_hours_should_use_locale_decimal_separator
+    to_test = {'en' => '0.75', 'de' => '0,75'}
+    with_settings :timespan_format => 'decimal' do
+      to_test.each do |locale, expected|
+        with_locale locale do
+          assert_equal expected, format_hours(0.75)
+        end
+      end
+    end
+  end
+
   def test_html_hours
     assert_equal '<span class="hours hours-int">0</span><span class="hours hours-dec">:45</span>',
                  html_hours('0:45')
@@ -2186,14 +2197,26 @@ class ApplicationHelperTest < Redmine::HelperTest
     assert_match(/name="new_issue-[a-z0-9]{8}"/, labelled_form_for(Issue.new){})
   end
 
-  def test_redner_if_exist_should_be_render_partial
+  # TODO: Remove this test when ApplicationHelper#render_if_exist is removed
+  def test_render_if_exist_should_be_render_partial
+    saved_behavior = Rails.application.deprecators[:active_support].behavior
+    Rails.application.deprecators[:active_support].behavior = :silence
+
     controller.prepend_view_path "test/fixtures/views"
     assert_equal "partial html\n", render_if_exist(:partial => 'partial')
+  ensure
+    Rails.application.deprecators[:active_support].behavior = saved_behavior
   end
 
-  def test_redner_if_exist_should_be_render_nil
+  # TODO: Remove this test when ApplicationHelper#render_if_exist is removed
+  def test_render_if_exist_should_be_render_nil
+    saved_behavior = Rails.application.deprecators[:active_support].behavior
+    Rails.application.deprecators[:active_support].behavior = :silence
+
     controller.prepend_view_path "test/fixtures/views"
     assert_nil render_if_exist(:partial => 'non_exist_partial')
+  ensure
+    Rails.application.deprecators[:active_support].behavior = saved_behavior
   end
 
   def test_export_csv_encoding_select_tag_should_return_nil_when_general_csv_encoding_is_UTF8
@@ -2241,6 +2264,20 @@ class ApplicationHelperTest < Redmine::HelperTest
       with_settings text_formatting: text_formatting do
         assert_equal expected, markdown_formatter
       end
+    end
+  end
+
+  def test_export_csv_separator_select_tag
+    with_locale 'en' do
+      result = export_csv_separator_select_tag
+      assert_equal ',', l(:general_csv_separator)
+      assert_select_in result, 'option[value=?][selected=selected]', ',', text: 'Comma'
+      assert_select_in result, 'option[value=?]', ';', text: 'Semicolon'
+    end
+    with_locale 'fr' do
+      result = export_csv_separator_select_tag
+      assert_equal ';', l(:general_csv_separator)
+      assert_select_in result, 'option[value=?][selected=selected]', ';'
     end
   end
 

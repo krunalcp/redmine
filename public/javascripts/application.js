@@ -1,5 +1,8 @@
-/* Redmine - project management software
-   Copyright (C) 2006-2023  Jean-Philippe Lang */
+/**
+ * Redmine - project management software
+ * Copyright (C) 2006-2023  Jean-Philippe Lang
+ * This code is released under the GNU General Public License.
+ */
 
 function sanitizeHTML(string) {
   var temp = document.createElement('span');
@@ -113,10 +116,10 @@ function initFilters() {
   $('#add_filter_select').change(function() {
     addFilter($(this).val(), '', []);
   });
-  $('#filters-table td.field input[type=checkbox]').each(function() {
+  $('#filters-table .field input[type=checkbox]').each(function() {
     toggleFilter($(this).val());
   });
-  $('#filters-table').on('click', 'td.field input[type=checkbox]', function() {
+  $('#filters-table').on('click', '.field input[type=checkbox]', function() {
     toggleFilter($(this).val());
   });
   $('#filters-table').on('keypress', 'input[type=text]', function(e) {
@@ -163,14 +166,14 @@ function buildFilterRow(field, operator, values) {
   var filterValues = filterOptions['values'];
   var i, select;
 
-  var tr = $('<tr class="filter">').attr('id', 'tr_'+fieldId).html(
-    '<td class="field"><input checked="checked" id="cb_'+fieldId+'" name="f[]" value="'+field+'" type="checkbox"><label for="cb_'+fieldId+'"> '+filterOptions['name']+'</label></td>' +
-    '<td class="operator"><select id="operators_'+fieldId+'" name="op['+field+']"></td>' +
-    '<td class="values"></td>'
+  var tr = $('<div class="filter">').attr('id', 'tr_'+fieldId).html(
+    '<div class="field"><input checked="checked" id="cb_'+fieldId+'" name="f[]" value="'+field+'" type="checkbox"><label for="cb_'+fieldId+'"> '+filterOptions['name']+'</label></div>' +
+    '<div class="operator"><select id="operators_'+fieldId+'" name="op['+field+']"></select></div>' +
+    '<div class="values"></div>'
   );
   filterTable.append(tr);
 
-  select = tr.find('td.operator select');
+  select = tr.find('.operator select');
   for (i = 0; i < operators.length; i++) {
     var option = $('<option>').val(operators[i]).text(operatorLabels[operators[i]]);
     if (operators[i] == operator) { option.prop('selected', true); }
@@ -185,11 +188,11 @@ function buildFilterRow(field, operator, values) {
   case "list_optional_with_history":
   case "list_status":
   case "list_subprojects":
-    tr.find('td.values').append(
+    tr.find('.values').append(
       '<span style="display:none;"><select class="value" id="values_'+fieldId+'_1" name="v['+field+'][]"></select>' +
       ' <span class="toggle-multiselect icon-only '+(values.length > 1 ? 'icon-toggle-minus' : 'icon-toggle-plus')+'">&nbsp;</span></span>'
     );
-    select = tr.find('td.values select');
+    select = tr.find('.values select');
     if (values.length > 1) { select.attr('multiple', true); }
     for (i = 0; i < filterValues.length; i++) {
       var filterValue = filterValues[i];
@@ -211,7 +214,7 @@ function buildFilterRow(field, operator, values) {
     break;
   case "date":
   case "date_past":
-    tr.find('td.values').append(
+    tr.find('.values').append(
       '<span style="display:none;"><input type="date" name="v['+field+'][]" id="values_'+fieldId+'_1" size="10" class="value date_value" /></span>' +
       ' <span style="display:none;"><input type="date" name="v['+field+'][]" id="values_'+fieldId+'_2" size="10" class="value date_value" /></span>' +
       ' <span style="display:none;"><input type="text" name="v['+field+'][]" id="values_'+fieldId+'" size="3" class="value" /> '+labelDayPlural+'</span>'
@@ -223,18 +226,18 @@ function buildFilterRow(field, operator, values) {
   case "string":
   case "text":
   case "search":
-    tr.find('td.values').append(
+    tr.find('.values').append(
       '<span style="display:none;"><input type="text" name="v['+field+'][]" id="values_'+fieldId+'" size="30" class="value" /></span>'
     );
     $('#values_'+fieldId).val(values[0]);
     break;
   case "relation":
-    tr.find('td.values').append(
+    tr.find('.values').append(
       '<span style="display:none;"><input type="text" name="v['+field+'][]" id="values_'+fieldId+'" size="6" class="value" /></span>' +
       '<span style="display:none;"><select class="value" name="v['+field+'][]" id="values_'+fieldId+'_1"></select></span>'
     );
     $('#values_'+fieldId).val(values[0]);
-    select = tr.find('td.values select');
+    select = tr.find('.values select');
     for (i = 0; i < filterValues.length; i++) {
       var filterValue = filterValues[i];
       var option = $('<option>');
@@ -246,7 +249,7 @@ function buildFilterRow(field, operator, values) {
   case "integer":
   case "float":
   case "tree":
-    tr.find('td.values').append(
+    tr.find('.values').append(
       '<span style="display:none;"><input type="text" name="v['+field+'][]" id="values_'+fieldId+'_1" size="14" class="value" /></span>' +
       ' <span style="display:none;"><input type="text" name="v['+field+'][]" id="values_'+fieldId+'_2" size="14" class="value" /></span>'
     );
@@ -269,7 +272,7 @@ function toggleFilter(field) {
 
 function enableValues(field, indexes) {
   var fieldId = field.replace('.', '_');
-  $('#tr_'+fieldId+' td.values .value').each(function(index) {
+  $('#tr_'+fieldId+' .values .value').each(function(index) {
     if ($.inArray(index, indexes) >= 0) {
       $(this).removeAttr('disabled');
       $(this).parents('span').first().show();
@@ -1172,7 +1175,12 @@ function inlineAutoComplete(element) {
           fillAttr: 'label',
           requireLeadingSpace: true,
           selectTemplate: function (issue) {
-            return '#' + issue.original.id;
+            let leadingHash = "#"
+            // keep ## syntax which is a valid issue syntax to show issue with title.
+            if (this.currentMentionTextSnapshot.charAt(0) === "#") {
+              leadingHash = "##"
+            }
+            return leadingHash + issue.original.id;
           },
           menuItemTemplate: function (issue) {
             return sanitizeHTML(issue.original.label);

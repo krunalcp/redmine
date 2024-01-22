@@ -21,6 +21,8 @@ module Redmine
   module Export
     module PDF
       module IssuesPdfHelper
+        include ActionView::Helpers::NumberHelper
+
         # Returns a PDF string of a single issue
         def issue_to_pdf(issue, assoc={})
           pdf = ITCPDF.new(current_language)
@@ -339,7 +341,7 @@ module Redmine
                   issue.visible_custom_field_values.detect do |v|
                     v.custom_field_id == column.custom_field.id
                   end
-                is_html = cv.custom_field.full_text_formatting?
+                is_html = cv.custom_field.full_text_formatting? if cv
                 text = show_value(cv, is_html)
               else
                 text = pdf_format_text issue, column.name.to_sym
@@ -406,7 +408,7 @@ module Redmine
                 elsif value.is_a?(Time)
                   format_time(value)
                 elsif value.is_a?(Float)
-                  sprintf "%.2f", value
+                  number_with_delimiter(sprintf('%.2f', value), delimiter: nil)
                 else
                   value
                 end

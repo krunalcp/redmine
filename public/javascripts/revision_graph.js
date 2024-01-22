@@ -1,5 +1,8 @@
-/* Redmine - project management software
-   Copyright (C) 2006-2023  Jean-Philippe Lang */
+/**
+ * Redmine - project management software
+ * Copyright (C) 2006-2023  Jean-Philippe Lang
+ * This code is released under the GNU General Public License.
+ */
 
 var revisionGraph = null;
 
@@ -94,7 +97,7 @@ function drawRevisionGraph(holder, commits_hash, graph_space) {
             .attr({
                 fill: '#000',
                 opacity: 0,
-                cursor: 'pointer', 
+                cursor: 'pointer',
                 href: commit.href
             });
 
