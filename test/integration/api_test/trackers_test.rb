@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,8 +20,6 @@
 require_relative '../../test_helper'
 
 class Redmine::ApiTest::TrackersTest < Redmine::ApiTest::Base
-  fixtures :trackers
-
   test "GET /trackers.xml should return trackers" do
     Tracker.find(2).update_attribute :core_fields, %w[assigned_to_id due_date]
     get '/trackers.xml'

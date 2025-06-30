@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -18,6 +18,11 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 Rails.application.routes.draw do
+  use_doorkeeper do
+    controllers :applications => 'oauth2_applications'
+  end
+
+  root :to => 'welcome#index'
   root :to => 'welcome#index', :as => 'home'
 
   match 'login', :to => 'account#login', :as => 'signin', :via => [:get, :post]
@@ -60,6 +65,8 @@ Rails.application.routes.draw do
       get 'diff'
     end
   end
+
+  resources :reactions, only: [:create, :destroy]
 
   get '/projects/:project_id/issues/gantt', :to => 'gantts#show', :as => 'project_gantt'
   get '/issues/gantt', :to => 'gantts#show'
@@ -112,6 +119,8 @@ Rails.application.routes.draw do
   resources :users do
     collection do
       delete 'bulk_destroy'
+      post :bulk_lock
+      post :bulk_unlock
     end
     resources :memberships, :controller => 'principal_memberships'
     resources :email_addresses, :only => [:index, :create, :update, :destroy]
@@ -314,7 +323,7 @@ Rails.application.routes.draw do
 
   # additional routes for having the file name at the end of url
   get 'attachments/:id/:filename', :to => 'attachments#show', :id => /\d+/, :filename => /.*/, :as => 'named_attachment', :format => 'html'
-  get 'attachments/download/:id/:filename', :to => 'attachments#download', :id => /\d+/, :filename => /.*/, :as => 'download_named_attachment'
+  get 'attachments/download/:id/:filename', :to => 'attachments#download', :id => /\d+/, :filename => /.*/, :as => 'download_named_attachment', :format => 'html'
   get 'attachments/download/:id', :to => 'attachments#download', :id => /\d+/
   get 'attachments/thumbnail/:id(/:size)', :to => 'attachments#thumbnail', :id => /\d+/, :size => /\d+/, :as => 'thumbnail'
   resources :attachments, :only => [:show, :update, :destroy]
@@ -405,7 +414,14 @@ Rails.application.routes.draw do
 
   match 'uploads', :to => 'attachments#upload', :via => :post
 
-  get 'robots', :to => 'welcome#robots'
+  get 'robots.:format', :to => 'welcome#robots', :constraints => {:format => 'txt'}
+
+  get 'help/wiki_syntax/(:type)', :controller => 'help', :action => 'show_wiki_syntax', :constraints => { :type => /detailed/ }, :as => 'help_wiki_syntax'
+  get 'help/code_highlighting', :controller => 'help', :action => 'show_code_highlighting',  :as => 'help_code_highlighting'
+
+  # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
+  # Can be used by load balancers and uptime monitors to verify that the app is live.
+  get "up" => "rails/health#show", :as => :rails_health_check
 
   Redmine::Plugin.directory.glob("*/config/routes.rb").sort.each do |plugin_routes_path|
     instance_eval(plugin_routes_path.read, plugin_routes_path.to_s)

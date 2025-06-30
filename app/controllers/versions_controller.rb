@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -51,7 +51,7 @@ class VersionsController < ApplicationController
         if @selected_tracker_ids.any? && @versions.any?
           issues = Issue.visible.
             includes(:project, :tracker).
-            preload(:status, :priority, :fixed_version).
+            preload(:status, :priority, :fixed_version, {:assigned_to => :email_address}).
             where(:tracker_id => @selected_tracker_ids, :project_id => project_ids, :fixed_version_id => @versions.map(&:id)).
             order("#{Project.table_name}.lft, #{Tracker.table_name}.position, #{Issue.table_name}.id")
           @issues_by_version = issues.group_by(&:fixed_version)
@@ -69,7 +69,7 @@ class VersionsController < ApplicationController
       format.html do
         @issues = @version.fixed_issues.visible.
           includes(:status, :tracker, :priority).
-          preload(:project).
+          preload(:project, {:assigned_to => :email_address}).
           reorder("#{Tracker.table_name}.position, #{Issue.table_name}.id").
           to_a
       end
@@ -165,7 +165,7 @@ class VersionsController < ApplicationController
           flash[:error] = l(:notice_unable_delete_version)
           redirect_to settings_project_path(@project, :tab => 'versions')
         end
-        format.api  {head :unprocessable_entity}
+        format.api  {head :unprocessable_content}
       end
     end
   end

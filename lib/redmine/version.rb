@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -22,9 +22,9 @@ require 'redmine/scm/adapters/subversion_adapter'
 module Redmine
   # @private
   module VERSION
-    MAJOR = 5
-    MINOR = 1
-    TINY  = 1
+    MAJOR = 6
+    MINOR = 0
+    TINY  = 5
 
     # Branch values:
     # * official release: nil

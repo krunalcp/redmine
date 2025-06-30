@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,9 +20,6 @@
 require_relative '../test_helper'
 
 class MessageTest < ActiveSupport::TestCase
-  fixtures :projects, :roles, :members, :member_roles, :boards, :messages,
-           :users, :watchers, :enabled_modules
-
   def setup
     User.current = nil
     @board = Board.find(1)

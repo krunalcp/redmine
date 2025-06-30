@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -100,6 +100,13 @@ class Redmine::MenuManager::MenuItemTest < ActiveSupport::TestCase
         :test_error, '/test', {:parent => :test_error}
       )
     end
+  end
+
+  def test_new_menu_item_should_allow_setting_the_plugin
+    menu_item = Redmine::MenuManager::MenuItem.new(
+      :test_plugin_menu, '/test', {:plugin => 'test_plugin_name'}
+    )
+    assert_equal 'test_plugin_name', menu_item.plugin
   end
 
   def test_has_children

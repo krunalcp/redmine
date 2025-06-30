@@ -94,8 +94,9 @@ sl:
 # Used in array.to_sentence.
   support:
     array:
-      sentence_connector: "in"
-      skip_last_comma: false
+      last_word_connector: " in "
+      two_words_connector: " in "
+      words_connector: ", "
 
   activerecord:
     errors:
@@ -136,6 +137,7 @@ sl:
         must_contain_digits: "must contain digits (0-9)"
         must_contain_special_chars: "must contain special characters (!, $, %, ...)"
         domain_not_allowed: "contains a domain not allowed (%{domain})"
+        too_simple: "is too simple"
 
   actionview_instancetag_blank_option: Prosimo izberite
 
@@ -541,7 +543,6 @@ sl:
   label_day_plural: dni
   label_repository: Shramba
   label_repository_plural: Shrambe
-  label_browse: Prebrskaj
   label_revision: Revizija
   label_revision_plural: Revizije
   label_associated_revisions: Povezane revizije
@@ -878,7 +879,7 @@ sl:
   error_can_not_delete_custom_field: Polja po meri ni mogoče izbrisati
   error_unable_to_connect: Povezava ni mogoča (%{value})
   error_can_not_remove_role: Ta vloga je v uporabi in je ni mogoče izbrisati.
-  error_can_not_delete_tracker: Ta sledilnik vsebuje zahtevke in se ga ne more izbrisati.
+  error_can_not_delete_tracker_html: Ta sledilnik vsebuje zahtevke in se ga ne more izbrisati.<p>The following projects have issues with this tracker:<br>%{projects}</p>
   field_principal: User or Group
   notice_failed_to_save_members: "Shranjevanje uporabnika(ov) ni uspelo: %{errors}."
   text_zoom_out: Približaj
@@ -1392,7 +1393,7 @@ sl:
     (%{identifier}) below.
   button_add_subtask: Add subtask
   notice_invalid_watcher: 'Invalid watcher: User will not receive any notifications
-    because it does not have access to view this object.'
+    because they do not have access to view this object.'
   button_fetch_changesets: Fetch commits
   permission_view_message_watchers: View message watchers list
   permission_add_message_watchers: Add message watchers
@@ -1487,3 +1488,47 @@ sl:
   text_default_active_job_queue_changed: Default queue adapter which is well suited
     only for dev/test changed
   label_option_auto_lang: auto
+  label_issue_attachment_added: Attachment added
+  field_estimated_remaining_hours: Estimated remaining time
+  field_last_activity_date: Last activity
+  setting_issue_done_ratio_interval: Done ratio options interval
+  setting_copy_attachments_on_issue_copy: Copy attachments on copy
+  field_thousands_delimiter: Thousands delimiter
+  label_involved_principals: Author / Previous assignee
+  label_attachment_summary:
+    zero: "%{filename}"
+    one: "%{filename} and 1 file"
+    other: "%{filename} and %{count} files"
+  setting_wiki_tablesort_enabled: Javascript based table sorting in wiki content
+  label_progressbar: Progress bar
+  error_spent_on_closed_issue: Cannot log time on a closed issue
+  setting_timelog_accept_closed_issues: Accept time logs on closed issues
+  setting_related_issues_default_columns: Related and sub issues list defaults
+  setting_display_related_issues_table_headers: Show table headers
+  error_can_not_remove_role_reason_members_html: "<p>The following projects have members
+    with this role:<br>%{projects}</p>"
+  setting_reactions_enabled: Enable reactions
+  reaction_text_x_other_users:
+    one: 1 other
+    other: "%{count} others"
+  text_setting_gravatar_default_initials_html: Users' initials are sent to <a href="https://www.gravatar.com">https://www.gravatar.com</a>
+    to generate their avatars.
+  permission_view_project: View projects
+  permission_search_project: Search projects
+  permission_view_members: View project members
+  label_oauth_permission_admin: Administrate this Redmine
+  label_oauth_admin_access: Administration
+  label_oauth_application_plural: Applications
+  label_oauth_authorized_application_plural: Authorized applications
+  text_oauth_admin_permission: Full administrative access. When authorized by an Administrator,
+    this application will be able to read and write all data and impersonate other users.
+  text_oauth_admin_permission_info: This application requests full administrative access.
+    If you are an Administrator (or become one in the future), it will be able to read
+    and write all data and impersonate other users on your behalf. If you want to avoid
+    this, authorize it as a user without Administrator privileges instead.
+  text_oauth_copy_secret_now: Copy the secret to a safe place now, it will not be shown
+    again.
+  text_oauth_implicit_permissions: View your name, login and primary email address
+  text_oauth_info_scopes: Select the scopes this application may request. The application
+    will not be allowed to do more than what is selected here. It will also always be
+    limited by the roles and project memberships of the user who authorized it.

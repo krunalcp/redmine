@@ -75,7 +75,7 @@ bg:
   number:
     format:
       separator: "."
-      delimiter: ""
+      delimiter: " "
       precision: 3
 
     human:
@@ -96,8 +96,9 @@ bg:
 # Used in array.to_sentence.
   support:
     array:
-      sentence_connector: "и"
-      skip_last_comma: false
+      last_word_connector: " и "
+      two_words_connector: " и "
+      words_connector: ", "
 
   activerecord:
     errors:
@@ -138,6 +139,7 @@ bg:
         must_contain_digits: "трябва да съдържа цифри (0-9)"
         must_contain_special_chars: "трябва да съдържа специални символи (!, $, %, ...)"
         domain_not_allowed: "contains a domain not allowed (%{domain})"
+        too_simple: "is too simple"
 
   actionview_instancetag_blank_option: Изберете
 
@@ -207,8 +209,9 @@ bg:
   error_no_tracker_in_project: Няма асоциирани тракери с този проект. Проверете настройките на проекта.
   error_no_default_issue_status: Няма установено подразбиращо се състояние за задачите. Моля проверете вашата конфигурация (Вижте "Администрация -> Състояния на задачи").
   error_can_not_delete_custom_field: Невъзможност за изтриване на потребителско поле
-  error_can_not_delete_tracker: Този тракер съдържа задачи и не може да бъде изтрит.
+  error_can_not_delete_tracker_html: Този тракер съдържа задачи и не може да бъде изтрит.<p>The following projects have issues with this tracker:<br>%{projects}</p>
   error_can_not_remove_role: Тази роля се използва и не може да бъде изтрита.
+  error_can_not_remove_role_reason_members_html: "<p>Следващите проекти имат членове с тази роля:<br>%{projects}</p>"
   error_can_not_reopen_issue_on_closed_version: Задача, асоциирана със затворена версия не може да бъде отворена отново
   error_can_not_archive_project: Този проект не може да бъде архивиран
   error_issue_done_ratios_not_updated: Процентът на завършените задачи не е обновен.
@@ -237,6 +240,7 @@ bg:
   error_exceeds_maximum_hours_per_day: Не можете да запишете повече от %{max_hours} часа на един ден (%{logged_hours} часове вече са записани)
   error_can_not_delete_auth_source: Този режим за идентификация се използва и не може да бъде премахнат.
   error_spent_on_future_date: Не е възможно да се отчете изразходвано време на дата в бъдещето
+  error_spent_on_closed_issue: Не е възможно да се отчете изразходвано време за затворена задача
   error_not_allowed_to_log_time_for_other_users: Вие нямате разрешение да записвате изразходвано време за други потребители
   error_can_not_execute_macro_html: Грешка при изпълнение на <strong>%{name}</strong> макрос
     (%{error})
@@ -420,7 +424,10 @@ bg:
   field_default_issue_query: Заявка по подразбиране
   field_default_project_query: Заявка по подразбиране за проекта
   field_default_time_entry_activity: Дейност по подразбиране за изразходвано време
+  field_estimated_remaining_hours: Изчислено оставащо време
   field_any_searchable: Всички обекти с текст (заглавие, описание, коментари на задачи, потребителски полета)
+  field_last_activity_date: Последна активност
+  field_thousands_delimiter: Раделител на хилядите
 
   setting_app_title: Заглавие
   setting_welcome_text: Допълнителен текст
@@ -478,6 +485,7 @@ bg:
   setting_default_projects_modules: Активирани модули по подразбиране за нов проект
   setting_issue_done_ratio: Изчисление на процента на готови задачи с
   setting_issue_done_ratio_issue_field: Използване на поле '% Прогрес'
+  setting_issue_done_ratio_interval: Done ratio options interval
   setting_issue_done_ratio_issue_status: Използване на състоянието на задачите
   setting_start_of_week: Първи ден на седмицата
   setting_rest_api_enabled: Разрешаване на REST web сървис
@@ -502,6 +510,7 @@ bg:
   setting_force_default_language_for_anonymous: Задължително език по подразбиране за анонимните потребители
   setting_force_default_language_for_loggedin: Задължително език по подразбиране за потребителите, влезли в Redmine
   setting_link_copied_issue: Свързване на задачите при копиране
+  setting_copy_attachments_on_issue_copy: Копиране на файловете при копиране
   setting_max_additional_emails: Максимален брой на допълнителните имейл адреси
   setting_email_domains_allowed: Разрешени имейл домейни
   setting_email_domains_denied: Забранени имейл домейни
@@ -516,9 +525,13 @@ bg:
   setting_timelog_accept_0_hours: Приемане на записи с 0 часа
   setting_timelog_max_hours_per_day: Максимум часове, които могат да бъдат записани за ден и за потребител
   setting_timelog_accept_future_dates: Разрешено отчитане на изразходвано време на дата в бъдещето
+  setting_timelog_accept_closed_issues: Разрешено отчитане на изразходвано време за затворени задачи
   setting_show_status_changes_in_mail_subject: Показване на промените на състоянието на задачите в поле Относно на имейлите
   setting_project_list_defaults: Проектен списък
   setting_twofa: Двуфакторна автентикация
+  setting_related_issues_default_columns: Колони по подразбиране за свързани и подзадачи
+  setting_display_related_issues_table_headers: Показване на заглавия на таблиците
+  setting_reactions_enabled: Разрешаване на реакциите
 
   permission_add_project: Създаване на проект
   permission_add_subprojects: Създаване на подпроекти
@@ -632,6 +645,7 @@ bg:
   label_issue_assigned_to_updated: Задачата е с назначен нов изпълнител
   label_issue_priority_updated: Обновен приоритет
   label_issue_fixed_version_updated: Променена версия
+  label_issue_attachment_added: Добавен файл
   label_document: Документ
   label_document_new: Нов документ
   label_document_plural: Документи
@@ -713,6 +727,10 @@ bg:
   label_attachment_plural: Файлове
   label_file_added: Добавен файл
   label_attachment_description: Описание на файла
+  label_attachment_summary:
+    zero: "%{filename}"
+    one: "%{filename} и 1 файл"
+    other: "%{filename} и %{count} файла"
   label_report: Справка
   label_report_plural: Справки
   label_news: Новини
@@ -828,7 +846,6 @@ bg:
   label_repository: Хранилище
   label_repository_new: Ново хранилище
   label_repository_plural: Хранилища
-  label_browse: Разглеждане
   label_branch: работен вариант
   label_tag: Версия
   label_revision: Ревизия
@@ -882,6 +899,7 @@ bg:
   label_diff_inline: хоризонтално
   label_diff_side_by_side: вертикално
   label_options: Опции
+  label_option_auto_lang: автоматично
   label_copy_workflow_from: Копирай работния процес от
   label_permissions_report: Справка за права
   label_watched_issues: Наблюдавани задачи
@@ -1141,6 +1159,7 @@ bg:
   label_default_query: Заявка по подразбиране
   label_edited: Редактирано
   label_time_by_author: "%{time} от %{author}"
+  label_involved_principals: Автор / Предишен назначен
 
   button_login: Вход
   button_submit: Изпращане
@@ -1326,6 +1345,7 @@ bg:
     Бие можете да го конфигурирате в config/configuration.yml.
   text_allowed_queries_to_select: Само публичните (за всички потребители) заявки са достъпни за избор
   text_setting_config_change: Вие можете да конфигурирате поведението в config/configuration.yml. Моля, рестартирайте Redmine след редактиране на файла.
+  text_setting_gravatar_default_initials_html: Инициалите на потребителите са изпратени на <a href="https://www.gravatar.com">https://www.gravatar.com</a> за генериране на техните аватари.
 
   default_role_manager: Мениджър
   default_role_developer: Разработчик
@@ -1377,6 +1397,7 @@ bg:
   label_import_time_entries: Импортиране на записи за използвано време
   label_import_users: Импортиране на потребители
   sudo_mode_new_info_html: "<strong>Какво се случва?</strong> Трябва да потвърдите вашата парола преди да предприемете административни действия. Това осигурява вашият акаунт."
+  label_progressbar: Прогрес бар
 
   twofa__totp__name: Authenticator app
   twofa__totp__text_pairing_info_html: Сканирайте този QR код или въведете текстовия ключ
@@ -1431,4 +1452,26 @@ bg:
     За да потвърдите, въведете името (%{login}) по-долу.
   text_project_destroy_enter_identifier: За да потвърдите действието, въведете идентификатора на проекта (%{identifier}) по-долу.
   field_name_or_email_or_login: Име, e-mail или login име
-  label_option_auto_lang: auto
+  setting_wiki_tablesort_enabled: Сортиране на таблици чрез Javascript във wiki страници
+  reaction_text_x_other_users:
+    one: 1 друг
+    other: "%{count} други"
+  permission_view_project: View projects
+  permission_search_project: Search projects
+  permission_view_members: View project members
+  label_oauth_permission_admin: Administrate this Redmine
+  label_oauth_admin_access: Administration
+  label_oauth_application_plural: Applications
+  label_oauth_authorized_application_plural: Authorized applications
+  text_oauth_admin_permission: Full administrative access. When authorized by an Administrator,
+    this application will be able to read and write all data and impersonate other users.
+  text_oauth_admin_permission_info: This application requests full administrative access.
+    If you are an Administrator (or become one in the future), it will be able to read
+    and write all data and impersonate other users on your behalf. If you want to avoid
+    this, authorize it as a user without Administrator privileges instead.
+  text_oauth_copy_secret_now: Copy the secret to a safe place now, it will not be shown
+    again.
+  text_oauth_implicit_permissions: View your name, login and primary email address
+  text_oauth_info_scopes: Select the scopes this application may request. The application
+    will not be allowed to do more than what is selected here. It will also always be
+    limited by the roles and project memberships of the user who authorized it.

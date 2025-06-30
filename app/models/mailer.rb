@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -53,7 +53,7 @@ class Mailer < ActionMailer::Base
       lang ||= Setting.default_language
       set_language_if_valid(lang)
 
-      super(action, *args)
+      super
     ensure
       User.current = initial_user
       ::I18n.locale = initial_language
@@ -187,13 +187,16 @@ class Mailer < ActionMailer::Base
       added_to_url = url_for(:controller => 'documents', :action => 'show', :id => container.id)
       added_to = "#{l(:label_document)}: #{container.title}"
     end
+    summary = l(:label_attachment_summary,
+                :filename => attachments.first.filename,
+                :count => attachments.length - 1)
     redmine_headers 'Project' => container.project.identifier
     @attachments = attachments
     @user = user
     @added_to = added_to
     @added_to_url = added_to_url
     mail :to => user,
-      :subject => "[#{container.project.name}] #{l(:label_attachment_new)}"
+         :subject => "[#{container.project.name}] #{l(:label_attachment_new)}: #{summary}"
   end
 
   # Notifies users about new attachments
@@ -639,7 +642,7 @@ class Mailer < ActionMailer::Base
   end
 
   # Activates/desactivates email deliveries during +block+
-  def self.with_deliveries(enabled = true, &block)
+  def self.with_deliveries(enabled = true, &)
     was_enabled = ActionMailer::Base.perform_deliveries
     ActionMailer::Base.perform_deliveries = !!enabled
     yield
@@ -652,7 +655,7 @@ class Mailer < ActionMailer::Base
   # Using the asynchronous queue from a Rake task will generally not work because
   # Rake will likely end, causing the in-process thread pool to be deleted, before
   # any/all of the .deliver_later emails are processed
-  def self.with_synched_deliveries(&block)
+  def self.with_synched_deliveries(&)
     adapter = ActionMailer::MailDeliveryJob.queue_adapter
     ActionMailer::MailDeliveryJob.queue_adapter = ActiveJob::QueueAdapters::InlineAdapter.new
     yield
@@ -661,16 +664,25 @@ class Mailer < ActionMailer::Base
   end
 
   def mail(headers={}, &block)
-    # Add a display name to the From field if Setting.mail_from does not
-    # include it
     begin
+      # Add a display name to the From field if Setting.mail_from does not
+      # include it
       mail_from = Mail::Address.new(Setting.mail_from)
       if mail_from.display_name.blank? && mail_from.comments.blank?
         mail_from.display_name =
           @author&.logged? ? @author.name : Setting.app_title
       end
       from = mail_from.format
-      list_id = "<#{mail_from.address.to_s.tr('@', '.')}>"
+
+      # Construct the value of the List-Id header field
+      from_addr = mail_from.address.to_s
+      project_identifier = self.headers['X-Redmine-Project']&.value
+      list_id = if project_identifier.present?
+                  "<#{project_identifier}.#{from_addr.tr('@', '.')}>"
+                else
+                  # Emails outside of a project context
+                  "<#{from_addr.tr('@', '.')}>"
+                end
     rescue Mail::Field::IncompleteParseError
       # Use Setting.mail_from as it is if Mail::Address cannot parse it
       # (probably the emission address is not RFC compliant)
@@ -714,9 +726,9 @@ class Mailer < ActionMailer::Base
     end
 
     if block
-      super(headers, &block)
+      super
     else
-      super(headers) do |format|
+      super do |format|
         format.text
         format.html unless Setting.plain_text_mail?
       end

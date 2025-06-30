@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -55,8 +55,8 @@ class MailHandler < ActionMailer::Base
   end
 
   # Receives an email and rescues any exception
-  def self.safe_receive(*args)
-    receive(*args)
+  def self.safe_receive(*)
+    receive(*)
   rescue => e
     Rails.logger.error "MailHandler: an unexpected error occurred when receiving email: #{e.message}"
     return false
@@ -398,7 +398,7 @@ class MailHandler < ActionMailer::Base
           if options.key?(:override)
             options[:override]
           else
-            (handler_options[:allow_override] & [attr.to_s.downcase.gsub(/\s+/, '_'), 'all']).present?
+            handler_options[:allow_override].intersect?([attr.to_s.downcase.gsub(/\s+/, '_'), 'all'])
           end
         if override && (v = extract_keyword!(cleaned_up_text_body, attr, options[:format]))
           v

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,8 +20,6 @@
 require_relative '../test_helper'
 
 class CustomFieldEnumerationsControllerTest < Redmine::ControllerTest
-  fixtures :users, :email_addresses
-
   def setup
     @request.session[:user_id] = 1
     @field = GroupCustomField.create!(:name => 'List', :field_format => 'enumeration', :is_required => false)
@@ -101,7 +99,7 @@ class CustomFieldEnumerationsControllerTest < Redmine::ControllerTest
         }
       }
     )
-    assert_response 302
+    assert_response :found
 
     @bar.reload
     assert_equal "Baz", @bar.name
@@ -164,7 +162,7 @@ class CustomFieldEnumerationsControllerTest < Redmine::ControllerTest
           :reassign_to_id => @bar.id
         }
       )
-      assert_response 302
+      assert_response :found
     end
 
     assert_equal @bar.id.to_s, group.reload.custom_field_value(@field)

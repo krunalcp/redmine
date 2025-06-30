@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -21,16 +21,6 @@ require_relative '../test_helper'
 
 class TimeEntryTest < ActiveSupport::TestCase
   include Redmine::I18n
-
-  fixtures :issues, :projects, :users, :time_entries,
-           :members, :roles, :member_roles,
-           :trackers, :issue_statuses,
-           :projects_trackers,
-           :journals, :journal_details,
-           :issue_categories, :enumerations,
-           :groups_users,
-           :enabled_modules,
-           :custom_fields, :custom_fields_projects, :custom_values
 
   def setup
     User.current = nil
@@ -87,11 +77,25 @@ class TimeEntryTest < ActiveSupport::TestCase
       "3 hours"  => 3.0,
       "12min"    => 0.2,
       "12 Min"    => 0.2,
+      "0:23"   => Rational(23, 60), # 0.38333333333333336
+      "0.9913888888888889" => Rational(59, 60), # 59m 29s is rounded to 59m
+      "0.9919444444444444" => 1     # 59m 30s is rounded to 60m
     }
     assertions.each do |k, v|
       t = TimeEntry.new(:hours => k)
-      assert_equal v, t.hours, "Converting #{k} failed:"
+      assert v == t.hours && t.hours.is_a?(Rational), "Converting #{k} failed:"
     end
+  end
+
+  def test_hours_sum_precision
+    # The sum of 10, 10, and 40 minutes should be 1 hour, but in older
+    # versions of Redmine, the result was 1.01 hours. This was because
+    # TimeEntry#hours was a float value rounded to 2 decimal places.
+    #  [0.17, 0.17, 0.67].sum => 1.01
+
+    hours = %w[10m 10m 40m].map {|m| TimeEntry.new(hours: m).hours}
+    assert_equal 1, hours.sum
+    hours.map {|h| assert h.is_a?(Rational)}
   end
 
   def test_hours_should_default_to_nil
@@ -168,6 +172,18 @@ class TimeEntryTest < ActiveSupport::TestCase
 
       assert !entry.save
       assert entry.errors[:base].present?
+    end
+  end
+
+  def test_should_not_accept_closed_issue
+    with_settings :timelog_accept_closed_issues => '0' do
+      project = Project.find(1)
+      entry = TimeEntry.generate project: project
+      issue = project.issues.to_a.detect(&:closed?)
+      entry.issue = issue
+      assert !entry.save
+      assert entry.errors[:base].present?
+      assert_equal 'Cannot log time on a closed issue', entry.errors[:base].first
     end
   end
 

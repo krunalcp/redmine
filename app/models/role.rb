@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -17,7 +17,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-class Role < ActiveRecord::Base
+class Role < ApplicationRecord
   include Redmine::SafeAttributes
 
   # Custom coder for the permissions attribute that should be an
@@ -198,11 +198,14 @@ class Role < ActiveRecord::Base
   # action can be:
   # * a parameter-like Hash (eg. :controller => 'projects', :action => 'edit')
   # * a permission Symbol (eg. :edit_project)
-  def allowed_to?(action)
+  # scope can be:
+  # * an array of permissions which will be used as filter (logical AND)
+
+  def allowed_to?(action, scope=nil)
     if action.is_a? Hash
-      allowed_actions.include? "#{action[:controller]}/#{action[:action]}"
+      allowed_actions(scope).include? "#{action[:controller]}/#{action[:action]}"
     else
-      allowed_permissions.include? action
+      allowed_permissions(scope).include? action
     end
   end
 
@@ -298,13 +301,20 @@ class Role < ActiveRecord::Base
 
   private
 
-  def allowed_permissions
-    @allowed_permissions ||= permissions + Redmine::AccessControl.public_permissions.collect {|p| p.name}
+  def allowed_permissions(scope = nil)
+    scope = scope.sort if scope.present? # to maintain stable cache keys
+    @allowed_permissions ||= {}
+    @allowed_permissions[scope] ||= begin
+      unscoped = permissions + Redmine::AccessControl.public_permissions.collect {|p| p.name}
+      scope.present? ? unscoped & scope : unscoped
+    end
   end
 
-  def allowed_actions
-    @actions_allowed ||=
-      allowed_permissions.inject([]) do |actions, permission|
+  def allowed_actions(scope = nil)
+    scope = scope.sort if scope.present? # to maintain stable cache keys
+    @actions_allowed ||= {}
+    @actions_allowed[scope] ||=
+      allowed_permissions(scope).inject([]) do |actions, permission|
         actions += Redmine::AccessControl.allowed_actions(permission)
       end.flatten
   end

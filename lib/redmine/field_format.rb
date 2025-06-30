@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -110,8 +110,8 @@ module Redmine
       end
       private_class_method :add
 
-      def self.field_attributes(*args)
-        CustomField.store_accessor :format_store, *args
+      def self.field_attributes(*)
+        CustomField.store_accessor(:format_store, *)
       end
 
       field_attributes :url_pattern, :full_width_layout
@@ -130,6 +130,8 @@ module Redmine
           if value.empty?
             value << ''
           end
+        elsif custom_field.field_format == 'float'
+          value = normalize_float(value)
         else
           value = value.to_s
         end
@@ -187,7 +189,7 @@ module Redmine
         end
       end
 
-      def parse_keyword(custom_field, keyword, &block)
+      def parse_keyword(custom_field, keyword, &)
         separator = Regexp.escape ","
         keyword = keyword.dup.to_s
 
@@ -250,7 +252,7 @@ module Redmine
         casted = cast_value(custom_field, value, customized)
         if html && custom_field.url_pattern.present?
           texts_and_urls = Array.wrap(casted).map do |single_value|
-            text = view.format_object(single_value, false).to_s
+            text = view.format_object(single_value, html: false).to_s
             url = url_from_pattern(custom_field, single_value, customized)
             [text, url]
           end
@@ -476,6 +478,7 @@ module Redmine
     class Numeric < Unbounded
       self.form_partial = 'custom_fields/formats/numeric'
       self.totalable_supported = true
+      field_attributes :thousands_delimiter
 
       def order_statement(custom_field)
         # Make the database cast values into numeric
@@ -539,7 +542,6 @@ module Redmine
       end
 
       def validate_single_value(custom_field, value, customized=nil)
-        value = normalize_float(value)
         errs = super
         errs << ::I18n.t('activerecord.errors.messages.invalid') unless Kernel.Float(value, exception: false)
         errs
@@ -829,6 +831,8 @@ module Redmine
     end
 
     class EnumerationFormat < RecordList
+      self.customized_class_names = nil
+
       add 'enumeration'
       self.form_partial = 'custom_fields/formats/enumeration'
 
@@ -1076,6 +1080,77 @@ module Redmine
               :filedrop => true,
               :attachment_format_custom_field => true
             })
+      end
+    end
+
+    class ProgressbarFormat < Numeric
+      add 'progressbar'
+
+      self.form_partial = 'custom_fields/formats/progressbar'
+      self.totalable_supported = false
+      field_attributes :ratio_interval
+
+      # Take the default value from Setting.issue_done_ratio_interval.to_i
+      # in order to have a consistent behaviour for default ratio interval.
+      def self.default_ratio_interval
+        Setting.issue_done_ratio_interval.to_i
+      end
+
+      def label
+        "label_progressbar"
+      end
+
+      def cast_single_value(custom_field, value, customized=nil)
+        value.to_i.clamp(0, 100)
+      end
+
+      def validate_single_value(custom_field, value, customized=nil)
+        errs = super
+        errs << ::I18n.t('activerecord.errors.messages.not_a_number') unless /^\d*$/.match?(value.to_s.strip)
+        errs << ::I18n.t('activerecord.errors.messages.invalid') unless value.to_i.between?(0, 100)
+        errs
+      end
+
+      def query_filter_options(custom_field, query)
+        {:type => :integer}
+      end
+
+      def group_statement(custom_field)
+        order_statement(custom_field)
+      end
+
+      def before_custom_field_save(custom_field)
+        super
+
+        if custom_field.ratio_interval.blank?
+          custom_field.ratio_interval = self.class.default_ratio_interval
+        end
+      end
+
+      def edit_tag(view, tag_id, tag_name, custom_value, options={})
+        view.select_tag(
+          tag_name,
+          view.options_for_select(
+            (0..100).step(custom_value.custom_field.ratio_interval.to_i).to_a.collect {|r| ["#{r} %", r]},
+            custom_value.value
+          ),
+          options.merge(id: tag_id, style: "width: 75px;")
+        )
+      end
+
+      def bulk_edit_tag(view, tag_id, tag_name, custom_field, objects, value, options={})
+        opts = view.options_for_select([[l(:label_no_change_option), '']] + (0..100).step(custom_field.ratio_interval.to_i).to_a.collect {|r| ["#{r} %", r]})
+        view.select_tag(tag_name, opts, options.merge(id: tag_id, style: "width: 75px;")) +
+          bulk_clear_tag(view, tag_id, tag_name, custom_field, value)
+      end
+
+      def formatted_value(view, custom_field, value, customized=nil, html=false)
+        if html
+          text = "#{value}%"
+          view.progress_bar(value.to_i, legend: (text if view.action_name == 'show'))
+        else
+          value.to_s
+        end
       end
     end
   end

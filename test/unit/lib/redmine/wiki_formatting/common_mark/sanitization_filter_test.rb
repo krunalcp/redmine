@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -19,7 +19,7 @@
 
 require_relative '../../../../../test_helper'
 
-if Object.const_defined?(:CommonMarker)
+if Object.const_defined?(:Commonmarker)
   require 'redmine/wiki_formatting/common_mark/sanitization_filter'
 
   class Redmine::WikiFormatting::CommonMark::SanitizationFilterTest < ActiveSupport::TestCase
@@ -47,10 +47,14 @@ if Object.const_defined?(:CommonMarker)
     end
 
     def test_should_support_footnotes
-      input = %(<a href="#fn-1" id="fnref-1">foo</a>)
-      assert_equal input, filter(input)
-      input = %(<ol><li id="fn-1">footnote</li></ol>)
-      assert_equal input, filter(input)
+      [
+        %(<a href="#fn-1" id="fnref-1">foo</a>),
+        %(<a href="#fn-1" id="fnref-1-2">foo</a>),
+        %(<ol><li id="fn-1">footnote</li></ol>),
+      ].each do |input|
+        assert_equal input, filter(input)
+        assert_equal input, filter(input)
+      end
     end
 
     def test_should_remove_invalid_ids
@@ -69,6 +73,32 @@ if Object.const_defined?(:CommonMarker)
 
       input = %(<code class="foo">foo</code>)
       assert_equal %(<code>foo</code>), filter(input)
+    end
+
+    def test_should_allow_valid_alert_div_and_p_classes
+      html = <<~HTML
+        <div class="markdown-alert markdown-alert-tip">
+          <p class="markdown-alert-title">Tip</p>
+          <p>Useful tip.</p>
+        </div>
+      HTML
+
+      sanitized = filter(html)
+
+      assert_include 'class="markdown-alert markdown-alert-tip"', sanitized
+      assert_include 'class="markdown-alert-title"', sanitized
+    end
+
+    def test_should_remove_invalid_div_class
+      html = '<div class="bad-class">Text</div>'
+      sanitized = filter(html)
+      assert_not_includes 'bad-class', sanitized
+    end
+
+    def test_should_remove_invalid_p_class
+      html = '<p class="bad-class">Text</p>'
+      sanitized = filter(html)
+      assert_not_include 'bad-class', sanitized
     end
 
     def test_should_allow_links_with_safe_url_schemes

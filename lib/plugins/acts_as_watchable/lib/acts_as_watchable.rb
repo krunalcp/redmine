@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -58,6 +58,24 @@ module Redmine
             users.reject! {|user| user.is_a?(User) && !visible?(user)}
           end
           users
+        end
+
+        # array of watchers that the given user is allowed to see
+        def visible_watcher_users(user = User.current)
+          if user.allowed_to?(:"view_#{self.class.name.underscore}_watchers", project)
+            watcher_users
+          else
+            # without permission, the user can only see themselves (if they're a watcher)
+            watcher_users & [user]
+          end
+        end
+
+        # true if user can be added as a watcher
+        def valid_watcher?(user)
+          return true unless respond_to?(:visible?)
+          return true unless user.is_a?(User)
+
+          visible?(user)
         end
 
         # Adds user as a watcher

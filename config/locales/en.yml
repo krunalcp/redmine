@@ -74,7 +74,7 @@ en:
   number:
     format:
       separator: "."
-      delimiter: ""
+      delimiter: ","
       precision: 3
 
     human:
@@ -95,8 +95,9 @@ en:
 # Used in array.to_sentence.
   support:
     array:
-      sentence_connector: "and"
-      skip_last_comma: false
+      last_word_connector: ", and "
+      two_words_connector: " and "
+      words_connector: ", "
 
   activerecord:
     errors:
@@ -137,6 +138,10 @@ en:
         must_contain_digits: "must contain digits (0-9)"
         must_contain_special_chars: "must contain special characters (!, $, %, ...)"
         domain_not_allowed: "contains a domain not allowed (%{domain})"
+        too_simple: "is too simple"
+    attributes:
+      doorkeeper/application:
+        scopes: Scopes
 
   actionview_instancetag_blank_option: Please select
 
@@ -193,7 +198,7 @@ en:
   notice_issue_not_closable_by_open_tasks: "This issue cannot be closed because it has at least one open subtask."
   notice_issue_not_closable_by_blocking_issue: "This issue cannot be closed because it is blocked by at least one open issue."
   notice_issue_not_reopenable_by_closed_parent_issue: "This issue cannot be reopened because its parent issue is closed."
-  notice_invalid_watcher: "Invalid watcher: User will not receive any notifications because it does not have access to view this object."
+  notice_invalid_watcher: "Invalid watcher: User will not receive any notifications because they do not have access to view this object."
 
   error_can_t_load_default_data: "Default configuration could not be loaded: %{value}"
   error_scm_not_found: "The entry or revision was not found in the repository."
@@ -204,8 +209,9 @@ en:
   error_no_tracker_in_project: 'No tracker is associated to this project. Please check the Project settings.'
   error_no_default_issue_status: 'No default issue status is defined. Please check your configuration (Go to "Administration -> Issue statuses").'
   error_can_not_delete_custom_field: Unable to delete custom field
-  error_can_not_delete_tracker: "This tracker contains issues and cannot be deleted."
+  error_can_not_delete_tracker_html: "This tracker contains issues and cannot be deleted.<p>The following projects have issues with this tracker:<br>%{projects}</p>"
   error_can_not_remove_role: "This role is in use and cannot be deleted."
+  error_can_not_remove_role_reason_members_html: "<p>The following projects have members with this role:<br>%{projects}</p>"
   error_can_not_reopen_issue_on_closed_version: 'An issue assigned to a closed version cannot be reopened'
   error_can_not_archive_project: This project cannot be archived
   error_issue_done_ratios_not_updated: "Issue done ratios not updated."
@@ -234,6 +240,7 @@ en:
   error_exceeds_maximum_hours_per_day: "Cannot log more than %{max_hours} hours on the same day (%{logged_hours} hours have already been logged)"
   error_can_not_delete_auth_source: "This authentication mode is in use and cannot be deleted."
   error_spent_on_future_date: "Cannot log time on a future date"
+  error_spent_on_closed_issue: "Cannot log time on a closed issue"
   error_not_allowed_to_log_time_for_other_users: "You are not allowed to log time for other users"
   error_can_not_execute_macro_html: "Error executing the <strong>%{name}</strong> macro (%{error})"
   error_macro_does_not_accept_block: "This macro does not accept a block of text"
@@ -418,6 +425,9 @@ en:
   field_default_project_query: Default project query
   field_default_time_entry_activity: Default spent time activity
   field_any_searchable: Any searchable text
+  field_estimated_remaining_hours: Estimated remaining time
+  field_last_activity_date: Last activity
+  field_thousands_delimiter: Thousands delimiter
 
   setting_app_title: Application title
   setting_welcome_text: Welcome text
@@ -475,6 +485,7 @@ en:
   setting_default_projects_modules: Default enabled modules for new projects
   setting_issue_done_ratio: Calculate the issue done ratio with
   setting_issue_done_ratio_issue_field: Use the issue field
+  setting_issue_done_ratio_interval: Done ratio options interval
   setting_issue_done_ratio_issue_status: Use the issue status
   setting_start_of_week: Start calendars on
   setting_rest_api_enabled: Enable REST web service
@@ -499,6 +510,7 @@ en:
   setting_force_default_language_for_anonymous: Force default language for anonymous users
   setting_force_default_language_for_loggedin: Force default language for logged-in users
   setting_link_copied_issue: Link issues on copy
+  setting_copy_attachments_on_issue_copy: Copy attachments on copy
   setting_max_additional_emails: Maximum number of additional email addresses
   setting_email_domains_allowed: Allowed email domains
   setting_email_domains_denied: Disallowed email domains
@@ -513,9 +525,13 @@ en:
   setting_timelog_accept_0_hours: Accept time logs with 0 hours
   setting_timelog_max_hours_per_day: Maximum hours that can be logged per day and user
   setting_timelog_accept_future_dates: Accept time logs on future dates
+  setting_timelog_accept_closed_issues: Accept time logs on closed issues
   setting_show_status_changes_in_mail_subject: Show status changes in issue mail notifications subject
   setting_project_list_defaults: Projects list defaults
   setting_twofa: Two-factor authentication
+  setting_related_issues_default_columns: Related and sub issues list defaults
+  setting_display_related_issues_table_headers: Show table headers
+  setting_reactions_enabled: Enable reactions
 
   permission_add_project: Create project
   permission_add_subprojects: Create subprojects
@@ -592,6 +608,10 @@ en:
   permission_manage_related_issues: Manage related issues
   permission_import_issues: Import issues
   permission_log_time_for_other_users: Log spent time for other users
+  permission_view_project: View projects
+  permission_search_project: Search projects
+  permission_view_members: View project members
+
 
   project_module_issue_tracking: Issue tracking
   project_module_time_tracking: Time tracking
@@ -629,6 +649,7 @@ en:
   label_issue_assigned_to_updated: Assignee updated
   label_issue_priority_updated: Priority updated
   label_issue_fixed_version_updated: Target version updated
+  label_issue_attachment_added: Attachment added
   label_document: Document
   label_document_new: New document
   label_document_plural: Documents
@@ -710,6 +731,10 @@ en:
   label_attachment_plural: Files
   label_file_added: File added
   label_attachment_description: File description
+  label_attachment_summary:
+    zero: "%{filename}"
+    one: "%{filename} and 1 file"
+    other: "%{filename} and %{count} files"
   label_report: Report
   label_report_plural: Reports
   label_news: News
@@ -825,7 +850,6 @@ en:
   label_repository: Repository
   label_repository_new: New repository
   label_repository_plural: Repositories
-  label_browse: Browse
   label_branch: Branch
   label_tag: Tag
   label_revision: Revision
@@ -949,9 +973,9 @@ en:
   label_user_mail_option_only_owner: "Only for things I watch or I am the owner of"
   label_user_mail_no_self_notified: "I don't want to be notified of changes that I make myself"
   label_user_mail_notify_about_high_priority_issues_html: "Also notify me about issues with a priority of <em>%{prio}</em> or higher"
-  label_registration_activation_by_email: account activation by email
-  label_registration_manual_activation: manual account activation
-  label_registration_automatic_activation: automatic account activation
+  label_registration_activation_by_email: Self account activation by email verification
+  label_registration_manual_activation: Account activation by administrator approval
+  label_registration_automatic_activation: Automatic account activation
   label_display_per_page: "Per page: %{value}"
   label_age: Age
   label_change_properties: Change properties
@@ -1139,6 +1163,12 @@ en:
   label_default_query: Default query
   label_edited: Edited
   label_time_by_author: "%{time} by %{author}"
+  label_involved_principals: Author / Previous assignee
+  label_progressbar: Progress bar
+  label_oauth_permission_admin: Administrate this Redmine
+  label_oauth_admin_access: Administration
+  label_oauth_application_plural: Applications
+  label_oauth_authorized_application_plural: Authorized applications
 
   button_login: Login
   button_submit: Submit
@@ -1323,6 +1353,12 @@ en:
   text_no_subject: no subject
   text_allowed_queries_to_select: Public (to any users) queries only selectable
   text_setting_config_change: You can configure the behaviour in config/configuration.yml. Please restart the application after editing it.
+  text_setting_gravatar_default_initials_html: Users' initials are sent to <a href="https://www.gravatar.com">https://www.gravatar.com</a> to generate their avatars.
+  text_oauth_admin_permission: Full administrative access. When authorized by an Administrator, this application will be able to read and write all data and impersonate other users.
+  text_oauth_admin_permission_info: This application requests full administrative access. If you are an Administrator (or become one in the future), it will be able to read and write all data and impersonate other users on your behalf. If you want to avoid this, authorize it as a user without Administrator privileges instead.
+  text_oauth_copy_secret_now: Copy the secret to a safe place now, it will not be shown again.
+  text_oauth_implicit_permissions: View your name, login and primary email address
+  text_oauth_info_scopes: Select the scopes this application may request. The application will not be allowed to do more than what is selected here. It will also always be limited by the roles and project memberships of the user who authorized it.
 
   default_role_manager: Manager
   default_role_developer: Developer
@@ -1413,3 +1449,7 @@ en:
   text_user_destroy_confirmation: "Are you sure you want to delete this user and remove all references to them? This cannot be undone. Often, locking a user instead of deleting them is the better solution. To confirm, please enter their login (%{login}) below."
   text_project_destroy_enter_identifier: "To confirm, please enter the project's identifier (%{identifier}) below."
   field_name_or_email_or_login: Name, email or login
+  setting_wiki_tablesort_enabled: Javascript based table sorting in wiki content
+  reaction_text_x_other_users:
+    one: "1 other"
+    other: "%{count} others"

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,14 +20,9 @@
 require_relative '../test_helper'
 
 class FeedsTest < Redmine::IntegrationTest
-  fixtures :projects, :trackers, :issue_statuses, :issues,
-           :enumerations, :users, :issue_categories,
-           :projects_trackers, :enabled_modules,
-           :roles, :member_roles, :members
-
   def test_feeds_should_include_icon_tag
     get '/projects.atom'
     assert_response :success
-    assert_select 'feed>icon', :text => %r{^http://www.example.com/favicon.ico}
+    assert_select 'feed>icon', :text => %r{^http://www.example.com/assets/favicon-\w+.ico}
   end
 end

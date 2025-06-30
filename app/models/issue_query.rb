@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -21,6 +21,7 @@ class IssueQuery < Query
   self.queried_class = Issue
   self.view_permission = :view_issues
 
+  ESTIMATED_REMAINING_HOURS_SQL = Arel.sql("COALESCE(#{Issue.table_name}.estimated_hours, 0) * (100 - COALESCE(#{Issue.table_name}.done_ratio, 0)) / 100")
   self.available_columns = [
     QueryColumn.new(:id, :sortable => "#{Issue.table_name}.id",
                     :default_order => 'desc', :caption => '#', :frozen => true),
@@ -40,6 +41,7 @@ class IssueQuery < Query
     QueryColumn.new(:assigned_to,
                     :sortable => lambda {User.fields_for_order_statement},
                     :groupable => true),
+    WatcherQueryColumn.new(:watcher_users, :caption => :label_issue_watchers),
     TimestampQueryColumn.new(:updated_on, :sortable => "#{Issue.table_name}.updated_on",
                              :default_order => 'desc', :groupable => true),
     QueryColumn.new(:category, :sortable => "#{IssueCategory.table_name}.name", :groupable => true),
@@ -48,6 +50,9 @@ class IssueQuery < Query
     QueryColumn.new(:start_date, :sortable => "#{Issue.table_name}.start_date", :groupable => true),
     QueryColumn.new(:due_date, :sortable => "#{Issue.table_name}.due_date", :groupable => true),
     QueryColumn.new(:estimated_hours, :sortable => "#{Issue.table_name}.estimated_hours",
+                    :totalable => true),
+    QueryColumn.new(:estimated_remaining_hours,
+                    :sortable => ESTIMATED_REMAINING_HOURS_SQL,
                     :totalable => true),
     QueryColumn.new(
       :total_estimated_hours,
@@ -165,6 +170,18 @@ class IssueQuery < Query
     add_available_filter(
       "author_id",
       :type => :list, :values => lambda {author_values}
+    )
+    add_available_filter(
+      "author.group",
+      :type => :list,
+      :values => lambda {Group.givable.visible.pluck(:name, :id).map {|name, id| [name, id.to_s]}},
+      :name => l(:label_attribute_of_author, :name => l(:label_group))
+    )
+    add_available_filter(
+      "author.role",
+      :type => :list,
+      :values => lambda {Role.givable.pluck(:name, :id).map {|name, id| [name, id.to_s]}},
+      :name => l(:label_attribute_of_author, :name => l(:field_role))
     )
     add_available_filter(
       "assigned_to_id",
@@ -329,7 +346,9 @@ class IssueQuery < Query
     end
 
     disabled_fields = Tracker.disabled_core_fields(trackers).map {|field| field.delete_suffix('_id')}
-    disabled_fields << "total_estimated_hours" if disabled_fields.include?("estimated_hours")
+    if disabled_fields.include?("estimated_hours")
+      disabled_fields += %w[total_estimated_hours estimated_remaining_hours]
+    end
     @available_columns.reject! do |column|
       disabled_fields.include?(column.name.to_s)
     end
@@ -369,6 +388,10 @@ class IssueQuery < Query
     map_total(scope.sum(:estimated_hours)) {|t| t.to_f.round(2)}
   end
 
+  def total_for_estimated_remaining_hours(scope)
+    map_total(scope.sum(ESTIMATED_REMAINING_HOURS_SQL)) {|t| t.to_f.round(2)}
+  end
+
   # Returns sum of all the issue's time entries hours
   def total_for_spent_hours(scope)
     total = scope.joins(:time_entries).
@@ -403,6 +426,9 @@ class IssueQuery < Query
       )
     if has_custom_field_column?
       scope = scope.preload(:custom_values)
+    end
+    if has_column?(:watcher_users)
+      scope = scope.preload(:watcher_users)
     end
 
     issues = scope.to_a
@@ -524,7 +550,9 @@ class IssueQuery < Query
 
   def sql_for_watcher_id_field(field, operator, value)
     db_table = Watcher.table_name
-    me, others = value.partition {|id| ['0', User.current.id.to_s].include?(id)}
+    me_ids = [0, User.current.id]
+    me_ids.concat(User.current.groups.pluck(:id))
+    me, others = value.partition {|id| me_ids.include?(id.to_i)}
     sql =
       if others.any?
         "SELECT #{Issue.table_name}.id FROM #{Issue.table_name} " +
@@ -590,6 +618,32 @@ class IssueQuery < Query
         " WHERE #{Issue.table_name}.project_id = #{Member.table_name}.project_id AND #{Member.table_name}.user_id = #{Issue.table_name}.assigned_to_id AND #{role_cond}"
       "(#{nl} #{sw} EXISTS (#{subquery}))"
     end
+  end
+
+  def sql_for_author_group_field(field, operator, value)
+    groups = value.empty? ? Group.givable : Group.where(:id => value).to_a
+
+    author_groups = groups.inject([]) do |user_ids, group|
+      user_ids + group.user_ids + [group.id]
+    end.uniq.compact.sort.collect(&:to_s)
+
+    '(' + sql_for_field("author_id", operator, author_groups, Issue.table_name, "author_id", false) + ')'
+  end
+
+  def sql_for_author_role_field(field, operator, value)
+    role_cond =
+      if value.any?
+        "#{MemberRole.table_name}.role_id IN (" + value.collect{|val| "'#{self.class.connection.quote_string(val)}'"}.join(",") + ")"
+      else
+        "1=0"
+      end
+    sw = operator == "!" ? 'NOT' : ''
+    nl = operator == "!" ? "#{Issue.table_name}.author_id IS NULL OR" : ''
+    subquery =
+      "SELECT 1" +
+      " FROM #{Member.table_name} inner join #{MemberRole.table_name} on members.id = member_roles.member_id" +
+      " WHERE #{Issue.table_name}.project_id = #{Member.table_name}.project_id AND #{Member.table_name}.user_id = #{Issue.table_name}.author_id AND #{role_cond}"
+    "(#{nl} #{sw} EXISTS (#{subquery}))"
   end
 
   def sql_for_fixed_version_status_field(field, operator, value)

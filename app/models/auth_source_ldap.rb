@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -73,7 +73,7 @@ class AuthSourceLdap < AuthSource
       ldap_con.open {}
       if self.account.present? && !self.account.include?("$login") && self.account_password.present?
         ldap_auth = authenticate_dn(self.account, self.account_password)
-        raise AuthSourceException.new(l(:error_ldap_bind_credentials)) if !ldap_auth
+        raise AuthSourceException.new(l(:error_ldap_bind_credentials)) unless ldap_auth
       end
     end
   rescue *NETWORK_EXCEPTIONS => e
@@ -137,7 +137,7 @@ class AuthSourceLdap < AuthSource
 
   private
 
-  def with_timeout(&block)
+  def with_timeout(&)
     timeout = self.timeout
     timeout = 20 unless timeout && timeout > 0
     Timeout.timeout(timeout) do
@@ -229,7 +229,7 @@ class AuthSourceLdap < AuthSource
     end
     attrs = {}
     search_filter = base_filter & Net::LDAP::Filter.eq(self.attr_login, login)
-    ldap_con.search( :base => self.base_dn,
+    ldap_con.search(:base => self.base_dn,
                      :filter => search_filter,
                      :attributes=> search_attributes) do |entry|
       if onthefly_register?

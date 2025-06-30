@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -21,9 +21,6 @@ require_relative '../test_helper'
 
 class ProjectsQueriesHelperTest < Redmine::HelperTest
   include ProjectsQueriesHelper
-
-  fixtures :projects, :enabled_modules,
-           :custom_fields, :custom_values
 
   def test_csv_value
     c_status = QueryColumn.new(:status)

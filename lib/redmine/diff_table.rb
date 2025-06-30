@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -82,6 +82,7 @@ module Redmine
     private
 
     def file_name=(arg)
+      # rubocop:disable Style/FileNull
       both_git_diff = false
       if file_name.nil?
         @git_diff = true if %r{^(a/|/dev/null)}.match?(arg)
@@ -106,6 +107,7 @@ module Redmine
       else
         @file_name = arg
       end
+      # rubocop:enable Style/FileNull
     end
 
     def diff_for_added_line

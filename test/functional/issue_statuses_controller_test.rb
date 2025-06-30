@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,8 +20,6 @@
 require_relative '../test_helper'
 
 class IssueStatusesControllerTest < Redmine::ControllerTest
-  fixtures :issue_statuses, :issues, :users, :trackers, :workflows
-
   def setup
     User.current = nil
     @request.session[:user_id] = 1 # admin
@@ -42,7 +40,7 @@ class IssueStatusesControllerTest < Redmine::ControllerTest
   def test_index_by_user_should_respond_with_406
     @request.session[:user_id] = 2
     get :index
-    assert_response 406
+    assert_response :not_acceptable
   end
 
   def test_index_should_show_warning_when_no_workflow_is_defined

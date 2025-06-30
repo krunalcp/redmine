@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -19,4 +19,6 @@
 
 # Include hook code here
 require_relative 'lib/acts_as_watchable'
-ActiveRecord::Base.send(:include, Redmine::Acts::Watchable)
+Rails.application.reloader.to_prepare do
+  ApplicationRecord.send(:include, Redmine::Acts::Watchable)
+end

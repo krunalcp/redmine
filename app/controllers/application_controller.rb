@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -28,9 +28,11 @@ class ApplicationController < ActionController::Base
   include Redmine::Hook::Helper
   include RoutesHelper
   include AvatarsHelper
+  include IconsHelper
 
   helper :routes
   helper :avatars
+  helper :icons
 
   class_attribute :accept_api_auth_actions
   class_attribute :accept_atom_auth_actions
@@ -129,6 +131,14 @@ class ApplicationController < ActionController::Base
       if (key = api_key_from_request)
         # Use API key
         user = User.find_by_api_key(key)
+      elsif access_token = Doorkeeper.authenticate(request)
+        # Oauth
+        if access_token.accessible?
+          user = User.active.find_by_id(access_token.resource_owner_id)
+          user.oauth_scope = access_token.scopes.all.map(&:to_sym)
+        else
+          doorkeeper_render_error
+        end
       elsif /\ABasic /i.match?(request.authorization.to_s)
         # HTTP Basic, either username/password or API key/random
         authenticate_with_http_basic do |username, password|
@@ -261,7 +271,7 @@ class ApplicationController < ActionController::Base
   end
 
   def require_login
-    if !User.current.logged?
+    unless User.current.logged?
       # Extract only the basic url parameters on non-GET requests
       if request.get?
         url = request.original_url
@@ -297,7 +307,7 @@ class ApplicationController < ActionController::Base
   def require_admin
     return unless require_login
 
-    if !User.current.admin?
+    unless User.current.admin?
       render_403
       return false
     end
@@ -475,25 +485,22 @@ class ApplicationController < ActionController::Base
     url = params[:back_url]
     if url.nil? && referer = request.env['HTTP_REFERER']
       url = CGI.unescape(referer.to_s)
-      # URLs that contains the utf8=[checkmark] parameter added by Rails are
-      # parsed as invalid by URI.parse so the redirect to the back URL would
-      # not be accepted (ApplicationController#validate_back_url would return
-      # false)
-      url.gsub!(/(\?|&)utf8=\u2713&?/, '\1')
     end
     url
   end
   helper_method :back_url
 
-  def redirect_back_or_default(default, options={})
+  def redirect_back_or_default(default, options = {})
+    referer = options.delete(:referer)
+
     if back_url = validate_back_url(params[:back_url].to_s)
       redirect_to(back_url)
       return
-    elsif options[:referer]
+    elsif referer
       redirect_to_referer_or default
       return
     end
-    redirect_to default
+    redirect_to default, options
     false
   end
 
@@ -507,25 +514,22 @@ class ApplicationController < ActionController::Base
     end
 
     begin
-      uri = URI.parse(back_url)
-    rescue URI::InvalidURIError
+      uri = Addressable::URI.parse(back_url)
+      [:scheme, :host, :port].each do |component|
+        if uri.send(component).present? && uri.send(component) != request.send(component)
+          return false
+        end
+      end
+      # Remove unnecessary components to convert the URL into a relative URL
+      uri.omit!(:scheme, :authority)
+    rescue Addressable::URI::InvalidURIError
       return false
     end
-
-    [:scheme, :host, :port].each do |component|
-      if uri.send(component).present? && uri.send(component) != request.send(component)
-        return false
-      end
-
-      uri.send(:"#{component}=", nil)
-    end
-    # Always ignore basic user:password in the URL
-    uri.userinfo = nil
 
     path = uri.to_s
     # Ensure that the remaining URL starts with a slash, followed by a
     # non-slash character or the end
-    if !%r{\A/([^/]|\z)}.match?(path)
+    unless %r{\A/([^/]|\z)}.match?(path)
       return false
     end
 
@@ -772,7 +776,7 @@ class ApplicationController < ActionController::Base
 
   def render_api_errors(*messages)
     @error_messages = messages.flatten
-    render :template => 'common/error_messages', :format => [:api], :status => :unprocessable_entity, :layout => nil
+    render :template => 'common/error_messages', :format => [:api], :status => :unprocessable_content, :layout => nil
   end
 
   # Overrides #_include_layout? so that #render with no arguments

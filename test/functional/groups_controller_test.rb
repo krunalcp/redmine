@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,8 +20,6 @@
 require_relative '../test_helper'
 
 class GroupsControllerTest < Redmine::ControllerTest
-  fixtures :projects, :users, :members, :member_roles, :roles, :groups_users
-
   def setup
     @request.session[:user_id] = 1
   end
@@ -72,7 +70,7 @@ class GroupsControllerTest < Redmine::ControllerTest
 
   def test_show_invalid_should_return_404
     get(:show, :params => {:id => 99})
-    assert_response 404
+    assert_response :not_found
   end
 
   def test_show_group_that_is_not_visible_should_return_404
@@ -80,7 +78,7 @@ class GroupsControllerTest < Redmine::ControllerTest
 
     @request.session[:user_id] = nil
     get :show, :params => {:id => 10}
-    assert_response 404
+    assert_response :not_found
   end
 
   def test_show_should_display_only_visible_users

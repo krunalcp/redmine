@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -73,7 +73,7 @@ class TrackersController < ApplicationController
           flash[:notice] = l(:notice_successful_update)
           redirect_to trackers_path(:page => params[:page])
         end
-        format.js {head 200}
+        format.js {head :ok}
       end
     else
       respond_to do |format|
@@ -81,7 +81,7 @@ class TrackersController < ApplicationController
           edit
           render :action => 'edit'
         end
-        format.js {head 422}
+        format.js {head :unprocessable_content}
       end
     end
   end
@@ -89,7 +89,11 @@ class TrackersController < ApplicationController
   def destroy
     @tracker = Tracker.find(params[:id])
     unless @tracker.issues.empty?
-      flash[:error] = l(:error_can_not_delete_tracker)
+      projects = Project.joins(:issues).where(issues: {tracker_id: @tracker.id}).sorted.distinct
+      links = projects.map do |p|
+        view_context.link_to(p, project_issues_path(p, set_filter: 1, tracker_id: @tracker.id, status_id: '*'))
+      end.join(', ')
+      flash[:error] = l(:error_can_not_delete_tracker_html, projects: links.html_safe)
     else
       @tracker.destroy
     end

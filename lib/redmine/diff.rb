@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -76,13 +76,9 @@ module Redmine
     def line_to_html_raw(line, offsets)
       if offsets
         s = +''
-        unless offsets.first == 0
-          s << CGI.escapeHTML(line[0..offsets.first-1])
-        end
+        s << CGI.escapeHTML(line[0..(offsets.first - 1)]) unless offsets.first == 0
         s << '<span>' + CGI.escapeHTML(line[offsets.first..offsets.last]) + '</span>'
-        unless offsets.last == -1
-          s << CGI.escapeHTML(line[offsets.last+1..-1])
-        end
+        s << CGI.escapeHTML(line[(offsets.last + 1)..-1]) unless offsets.last == -1
         s
       else
         CGI.escapeHTML(line)

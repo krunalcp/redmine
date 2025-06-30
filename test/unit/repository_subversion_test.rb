@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,8 +20,6 @@
 require_relative '../test_helper'
 
 class RepositorySubversionTest < ActiveSupport::TestCase
-  fixtures :projects, :repositories, :enabled_modules, :users, :roles
-
   include Redmine::I18n
 
   NUM_REV = 16
@@ -32,6 +30,7 @@ class RepositorySubversionTest < ActiveSupport::TestCase
     @repository = Repository::Subversion.create(:project => @project,
                     :url => self.class.subversion_repository_url)
     assert @repository
+    skip "SCM command is unavailable" unless @repository.class.scm_available
   end
 
   def test_invalid_url

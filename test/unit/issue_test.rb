@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,18 +20,6 @@
 require_relative '../test_helper'
 
 class IssueTest < ActiveSupport::TestCase
-  fixtures :projects, :users, :email_addresses, :user_preferences, :members, :member_roles, :roles,
-           :groups_users,
-           :trackers, :projects_trackers,
-           :enabled_modules,
-           :versions,
-           :issue_statuses, :issue_categories, :issue_relations, :workflows,
-           :enumerations,
-           :issues, :journals, :journal_details,
-           :watchers,
-           :custom_fields, :custom_fields_projects, :custom_fields_trackers, :custom_values,
-           :time_entries
-
   include Redmine::I18n
 
   def setup
@@ -81,6 +69,16 @@ class IssueTest < ActiveSupport::TestCase
 
     issue = Issue.new(:project_id => 1, :tracker_id => 1, :author_id => 3, :subject => 'test_create_with_all_fields_disabled')
     assert_save issue
+  end
+
+  def test_create_with_no_priority_defined
+    IssuePriority.delete_all
+    issue = Issue.new(
+      project_id: 1, tracker_id: 1, author_id: 3, subject: 'test_create_with_no_priority_defined'
+    )
+
+    assert_nothing_raised {assert_not issue.save}
+    assert_include 'Priority cannot be blank', issue.errors.full_messages
   end
 
   def test_default_priority_should_be_set_when_priority_field_is_disabled
@@ -707,9 +705,6 @@ class IssueTest < ActiveSupport::TestCase
     issue.expects(:project_id=).in_sequence(seq)
     issue.expects(:tracker_id=).in_sequence(seq)
     issue.expects(:subject=).in_sequence(seq)
-    assert_raise Exception do
-      issue.attributes = {:subject => 'Test'}
-    end
     assert_nothing_raised do
       issue.attributes = {:tracker_id => 2, :project_id => 1, :subject => 'Test'}
     end
@@ -882,7 +877,7 @@ class IssueTest < ActiveSupport::TestCase
     WorkflowTransition.create!(:role_id => 2, :tracker_id => 1, :old_status_id => 1, :new_status_id => 3)
 
     # status 3 is not displayed
-    expected_statuses = IssueStatus.where(:id => [1, 2])
+    expected_statuses = IssueStatus.where(:id => [1, 2]).order(:id)
 
     admin = User.find(1)
     assert_equal expected_statuses, issue.new_statuses_allowed_to(admin)
@@ -1491,11 +1486,31 @@ class IssueTest < ActiveSupport::TestCase
     user2 = User.find(3)
     issue = Issue.find(8)
 
+    User.current = user
+
     Watcher.create!(:user => user, :watchable => issue)
     Watcher.create!(:user => user2, :watchable => issue)
 
     user2.status = User::STATUS_LOCKED
     user2.save!
+
+    issue = Issue.new.copy_from(8)
+
+    assert issue.save
+    assert issue.watched_by?(user)
+    assert !issue.watched_by?(user2)
+  end
+
+  def test_copy_should_not_copy_watchers_without_permission
+    user = User.find(2)
+    user2 = User.find(3)
+    issue = Issue.find(8)
+
+    Role.find(1).remove_permission! :view_issue_watchers
+    User.current = user
+
+    Watcher.create!(:user => user, :watchable => issue)
+    Watcher.create!(:user => user2, :watchable => issue)
 
     issue = Issue.new.copy_from(8)
 
@@ -2163,6 +2178,28 @@ class IssueTest < ActiveSupport::TestCase
     end
   end
 
+  def test_destroy_should_delete_attachments_on_custom_values
+    cf = IssueCustomField.create!(:name => 'Attachable field', :field_format => 'attachment', :is_for_all => true, :tracker_ids => [1])
+    user = User.find(2)
+    issue = Issue.new(:project_id => 1, :tracker_id => 1, :subject => 'test', :author_id => user.id)
+    attachment = Attachment.create!(:container => issue, :file => uploaded_test_file('testfile.txt', 'text/plain'), :author_id => user.id)
+    issue.send(
+      :safe_attributes=,
+      {
+        'custom_fields' =>
+          [
+            {'id' => cf.id.to_s, 'value' => attachment.id.to_s},
+          ]
+      }, user
+    )
+
+    assert_difference 'CustomValue.where(:customized_type => "Issue").count', -(issue.custom_values.count) do
+      assert_difference 'Attachment.count', -1 do
+        issue.destroy
+      end
+    end
+  end
+
   def test_destroying_a_deleted_issue_should_not_raise_an_error
     issue = Issue.find(1)
     Issue.find(1).destroy
@@ -2193,6 +2230,16 @@ class IssueTest < ActiveSupport::TestCase
 
     assert blocked_issue.blocked?
     assert !blocking_issue.blocked?
+  end
+
+  def test_blocked_should_not_raise_exception_when_blocking_issue_id_is_invalid
+    ir = IssueRelation.find_by(issue_from_id: 10, issue_to_id: 9, relation_type: 'blocks')
+    issue = Issue.find(9)
+    assert issue.blocked?
+
+    ir.update_column :issue_from_id, 0  # invalid issue id
+    issue.reload
+    assert_nothing_raised {assert_not issue.blocked?}
   end
 
   def test_blocked_issues_dont_allow_closed_statuses
@@ -3220,6 +3267,15 @@ class IssueTest < ActiveSupport::TestCase
     assert_equal was_closed_on, issue.closed_on
   end
 
+  def test_prior_assigned_to
+    issue = Issue.generate!(assigned_to_id: 2)
+    issue.init_journal(User.find(2), 'update')
+    issue.assigned_to_id = 3
+    issue.save
+
+    assert_equal User.find(2), issue.prior_assigned_to
+  end
+
   def test_status_was_should_return_nil_for_new_issue
     issue = Issue.new
     assert_nil issue.status_was
@@ -3393,7 +3449,7 @@ class IssueTest < ActiveSupport::TestCase
     user_in_europe.pref.update! :time_zone => 'UTC'
 
     user_in_asia = users(:users_002)
-    user_in_asia.pref.update! :time_zone => 'Hongkong'
+    user_in_asia.pref.update! :time_zone => 'Asia/Hong_Kong'
 
     issue = Issue.generate! :due_date => Date.parse('2016-03-20')
 

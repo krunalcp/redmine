@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -21,11 +21,6 @@ require_relative '../../test_helper'
 
 class Redmine::ApiTest::ProjectsTest < Redmine::ApiTest::Base
   include ActiveJob::TestHelper
-  fixtures :projects, :versions, :users, :roles, :members, :member_roles, :issues, :journals, :journal_details,
-           :trackers, :projects_trackers, :issue_statuses, :enabled_modules, :enumerations, :boards, :messages,
-           :attachments, :custom_fields, :custom_values, :custom_fields_projects, :time_entries, :issue_categories,
-           :queries
-
   def setup
     super
     set_tmp_attachments_directory
@@ -304,7 +299,7 @@ class Redmine::ApiTest::ProjectsTest < Redmine::ApiTest::Base
       )
     end
 
-    assert_response :unprocessable_entity
+    assert_response :unprocessable_content
     assert_equal 'application/xml', @response.media_type
     assert_select 'errors error', :text => "Identifier cannot be blank"
   end
@@ -366,7 +361,7 @@ class Redmine::ApiTest::ProjectsTest < Redmine::ApiTest::Base
       )
     end
 
-    assert_response :unprocessable_entity
+    assert_response :unprocessable_content
     assert_equal 'application/xml', @response.media_type
     assert_select 'errors error', :text => "Name cannot be blank"
   end
@@ -415,5 +410,9 @@ class Redmine::ApiTest::ProjectsTest < Redmine::ApiTest::Base
     assert_equal '', @response.body
     assert p = Project.find(1)
     assert p.active?
+  end
+
+  def queue_adapter_for_test
+    ActiveJob::QueueAdapters::TestAdapter.new
   end
 end

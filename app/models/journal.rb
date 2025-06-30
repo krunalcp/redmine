@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -17,8 +17,9 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-class Journal < ActiveRecord::Base
+class Journal < ApplicationRecord
   include Redmine::SafeAttributes
+  include Redmine::Reaction::Reactable
 
   belongs_to :journalized, :polymorphic => true
   # added as a quick fix to allow eager loading of the polymorphic association
@@ -53,7 +54,7 @@ class Journal < ActiveRecord::Base
     :author_key => :user_id,
     :scope =>
       proc do
-        preload({:issue => :project}, :user).
+        preload({:issue => :project}, {:issue => :tracker}, :user).
           joins("LEFT OUTER JOIN #{JournalDetail.table_name} ON #{JournalDetail.table_name}.journal_id = #{Journal.table_name}.id").
             where("#{Journal.table_name}.journalized_type = 'Issue' AND" +
                   " (#{JournalDetail.table_name}.prop_key = 'status_id' OR #{Journal.table_name}.notes <> '')").distinct
@@ -104,6 +105,15 @@ class Journal < ActiveRecord::Base
     (details.empty? && notes.blank?) ? false : super()
   end
 
+  def journalized
+    if journalized_type == 'Issue' && association(:issue).loaded?
+      # Avoid extra query by using preloaded association
+      issue
+    else
+      super
+    end
+  end
+
   # Returns journal details that are visible to user
   def visible_details(user=User.current)
     details.select do |detail|
@@ -148,8 +158,8 @@ class Journal < ActiveRecord::Base
     end
   end
 
-  def visible?(*args)
-    journalized.visible?(*args)
+  def visible?(*)
+    journalized.visible?(*)
   end
 
   # Returns a string of css classes
@@ -339,7 +349,7 @@ class Journal < ActiveRecord::Base
 
   def add_watcher
     if user&.active? &&
-        user&.allowed_to?(:add_issue_watchers, project) &&
+        user.allowed_to?(:add_issue_watchers, project) &&
         user.pref.auto_watch_on?('issue_contributed_to') &&
         !Watcher.any_watched?(Array.wrap(journalized), user)
       journalized.set_watcher(user, true)
@@ -354,7 +364,8 @@ class Journal < ActiveRecord::Base
           (Setting.notified_events.include?('issue_status_updated') && new_status.present?) ||
           (Setting.notified_events.include?('issue_assigned_to_updated') && detail_for_attribute('assigned_to_id').present?) ||
           (Setting.notified_events.include?('issue_priority_updated') && new_value_for('priority_id').present?) ||
-          (Setting.notified_events.include?('issue_fixed_version_updated') && detail_for_attribute('fixed_version_id').present?)
+          (Setting.notified_events.include?('issue_fixed_version_updated') && detail_for_attribute('fixed_version_id').present?) ||
+          (Setting.notified_events.include?('issue_attachment_added') && details.any? {|d| d.property == 'attachment' && d.value })
         )
       Mailer.deliver_issue_edit(self)
     end

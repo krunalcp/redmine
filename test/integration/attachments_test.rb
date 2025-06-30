@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,15 +20,6 @@
 require_relative '../test_helper'
 
 class AttachmentsTest < Redmine::IntegrationTest
-  fixtures :projects, :enabled_modules,
-           :users, :email_addresses,
-           :roles, :members, :member_roles,
-           :trackers, :projects_trackers,
-           :issues, :issue_statuses, :enumerations,
-           :attachments,
-           :wiki_content_versions, :wiki_contents, :wiki_pages,
-           :journals, :journal_details
-
   def test_upload_should_set_default_content_type
     log_user('jsmith', 'jsmith')
     assert_difference 'Attachment.count' do
@@ -75,7 +66,7 @@ class AttachmentsTest < Redmine::IntegrationTest
           }
         }
       )
-      assert_response 302
+      assert_response :found
     end
 
     issue = Issue.order('id DESC').first
@@ -159,7 +150,7 @@ class AttachmentsTest < Redmine::IntegrationTest
           }
         }
       )
-      assert_response 302
+      assert_response :found
     end
 
     issue = Issue.order('id DESC').first
@@ -185,7 +176,7 @@ class AttachmentsTest < Redmine::IntegrationTest
           :attachments => {'p0' => {:filename => filename, :token => token}}
         }
       )
-      assert_response 302
+      assert_response :found
     end
     issue = Issue.order('id DESC').first
     assert_equal 'Issue with upload', issue.subject
@@ -258,7 +249,7 @@ class AttachmentsTest < Redmine::IntegrationTest
 
     with_settings :login_required => '0' do
       get "/attachments/journals/3/download"
-      assert_response 403
+      assert_response :forbidden
     end
     with_settings :login_required => '1' do
       get "/attachments/journals/3/download"
@@ -273,6 +264,16 @@ class AttachmentsTest < Redmine::IntegrationTest
     with_settings :login_required => '1' do
       get "/attachments/journals/3/download"
       assert_redirected_to "/login?back_url=http%3A%2F%2Fwww.example.com%2Fattachments%2Fjournals%2F3%2Fdownload"
+    end
+  end
+
+  def test_unauthorized_named_download_link_should_redirect_to_login
+    with_settings login_required: '1' do
+      get "/attachments/download/1"
+      assert_redirected_to "/login?back_url=http%3A%2F%2Fwww.example.com%2Fattachments%2Fdownload%2F1"
+
+      get "/attachments/download/1/error281.txt"
+      assert_redirected_to "/login?back_url=http%3A%2F%2Fwww.example.com%2Fattachments%2Fdownload%2F1%2Ferror281.txt"
     end
   end
 

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,13 +20,6 @@
 require_relative '../test_helper'
 
 class IssueSubtaskingTest < ActiveSupport::TestCase
-  fixtures :projects, :users, :roles, :members, :member_roles,
-           :trackers, :projects_trackers,
-           :issue_statuses, :issue_categories, :enumerations,
-           :issues,
-           :enabled_modules,
-           :workflows
-
   def setup
     User.current = nil
   end
@@ -53,7 +46,7 @@ class IssueSubtaskingTest < ActiveSupport::TestCase
     with_settings :parent_issue_dates => 'derived' do
       parent = Issue.generate!
       parent.generate_child!(:start_date => '2010-01-25', :due_date => '2010-02-15')
-      parent.generate_child!(                             :due_date => '2010-02-13')
+      parent.generate_child!(:due_date => '2010-02-13')
       parent.generate_child!(:start_date => '2010-02-01', :due_date => '2010-02-22')
       parent.reload
       assert_equal Date.parse('2010-01-25'), parent.start_date

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,18 +20,6 @@
 require_relative '../test_helper'
 
 class TimeEntryImportTest < ActiveSupport::TestCase
-  fixtures :projects, :enabled_modules,
-           :users, :email_addresses,
-           :roles, :members, :member_roles,
-           :issues, :issue_statuses,
-           :trackers, :projects_trackers,
-           :versions,
-           :issue_categories,
-           :enumerations,
-           :workflows,
-           :custom_fields,
-           :custom_values
-
   include Redmine::I18n
 
   def setup

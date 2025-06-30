@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,12 +20,6 @@
 require_relative '../test_helper'
 
 class MyControllerTest < Redmine::ControllerTest
-  fixtures :users, :email_addresses, :user_preferences,
-           :roles, :projects, :members, :member_roles,
-           :issues, :issue_statuses, :trackers, :enumerations,
-           :custom_fields, :auth_sources, :queries, :enabled_modules,
-           :journals, :projects_trackers, :issue_categories
-
   def setup
     @request.session[:user_id] = 2
   end
@@ -605,9 +599,9 @@ class MyControllerTest < Redmine::ControllerTest
   def test_change_password
     get :password
     assert_response :success
-    assert_select 'input[type=password][name=password]'
-    assert_select 'input[type=password][name=new_password]'
-    assert_select 'input[type=password][name=new_password_confirmation]'
+    assert_select 'input[type=password][name=password][autocomplete=current-password]'
+    assert_select 'input[type=password][name=new_password][autocomplete=new-password]'
+    assert_select 'input[type=password][name=new_password_confirmation][autocomplete=new-password]'
   end
 
   def test_update_password
@@ -730,7 +724,7 @@ class MyControllerTest < Redmine::ControllerTest
         :block => 'invalid'
       }
     )
-    assert_response 422
+    assert_response :unprocessable_content
   end
 
   def test_remove_block

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -48,7 +48,11 @@ module SettingsHelper
     errors.each do |name, message|
       s << content_tag('li', content_tag('b', l("setting_#{name}")) + " " + message)
     end
-    content_tag('div', content_tag('ul', s), :id => 'errorExplanation')
+
+    h = ''.html_safe
+    h << notice_icon('error')
+    h << content_tag('ul', s)
+    content_tag('div', h, :id => 'errorExplanation')
   end
 
   def setting_value(setting)
@@ -166,6 +170,16 @@ module SettingsHelper
     options.map {|label, value| [l(label), value.to_s]}
   end
 
+  def copy_attachments_on_issue_copy_options
+    options = [
+      [:general_text_Yes, 'yes'],
+      [:general_text_No, 'no'],
+      [:label_ask, 'ask']
+    ]
+
+    options.map {|label, value| [l(label), value.to_s]}
+  end
+
   def default_global_issue_query_options
     [[l(:label_none), '']] + IssueQuery.only_public.where(project_id: nil).pluck(:name, :id)
   end
@@ -230,6 +244,7 @@ module SettingsHelper
      ['Mystery man', 'mm'],
      ['Retro', 'retro'],
      ['Robohash', 'robohash'],
-     ['Wavatars', 'wavatar']]
+     ['Wavatars', 'wavatar'],
+     ['Initials', 'initials']]
   end
 end

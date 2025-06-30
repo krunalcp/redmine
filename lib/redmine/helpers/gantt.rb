@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -198,12 +198,18 @@ module Redmine
 
       # Returns the distinct versions of the issues that belong to +project+
       def project_versions(project)
-        project_issues(project).filter_map(&:fixed_version).uniq
+        @project_versions ||= {}
+        @project_versions[project&.id] ||= begin
+          ids = project_issues(project).filter_map(&:fixed_version_id).uniq
+          Version.where(id: ids).to_a
+        end
       end
 
       # Returns the issues that belong to +project+ and are assigned to +version+
       def version_issues(project, version)
-        project_issues(project).select {|issue| issue.fixed_version == version}
+        @version_issues ||= {}
+        @version_issues[[project&.id, version&.id]] ||=
+          project_issues(project).select {|issue| issue.fixed_version_id == version&.id}
       end
 
       def render(options={})
@@ -232,7 +238,7 @@ module Redmine
         render_object_row(project, options)
         increment_indent(options) do
           # render issue that are not assigned to a version
-          issues = project_issues(project).select {|i| i.fixed_version.nil?}
+          issues = project_issues(project).select {|i| i.fixed_version_id.nil?}
           render_issues(issues, options)
           # then render project versions and their issues
           versions = project_versions(project)
@@ -394,11 +400,19 @@ module Redmine
         font_path =
           Redmine::Configuration['minimagick_font_path'].presence ||
             Redmine::Configuration['rmagick_font_path'].presence
-        img = MiniMagick::Image.create(".#{format}", false)
+        img = MiniMagick::Image.create(".#{format}")
         if Redmine::Configuration['imagemagick_convert_command'].present?
-          MiniMagick.cli_path = File.dirname(Redmine::Configuration['imagemagick_convert_command'])
+          if MiniMagick.respond_to?(:cli_path)
+            MiniMagick.cli_path = File.dirname(Redmine::Configuration['imagemagick_convert_command'])
+          else
+            Rails.logger.warn(
+              'imagemagick_convert_command option is ignored ' \
+              'because MiniMagick has removed the option to define a custom path for the binary. ' \
+              'Please ensure the convert binary is available in your PATH.'
+            )
+          end
         end
-        MiniMagick::Tool::Convert.new do |gc|
+        MiniMagick.convert do |gc|
           gc.size('%dx%d' % [subject_width + g_width + 1, height])
           gc.xc('white')
           gc.font(font_path) if font_path.present?
@@ -494,7 +508,7 @@ module Redmine
           lines(:image => gc, :top => top, :zoom => zoom,
                 :subject_width => subject_width, :format => :image)
           # today red line
-          if User.current.today >= @date_from and User.current.today <= date_to
+          if User.current.today.between?(@date_from, date_to)
             gc.stroke('red')
             x = (User.current.today - @date_from + 1) * zoom + subject_width
             gc.draw('line %g,%g %g,%g' % [
@@ -723,9 +737,10 @@ module Redmine
             progress_date = calc_progress_date(issue.start_date,
                                                issue.due_before, issue.done_ratio)
             css_classes << ' behind-start-date' if progress_date < self.date_from
-            css_classes << ' over-end-date' if progress_date > self.date_to
+            css_classes << ' over-end-date' if progress_date > self.date_to && issue.done_ratio > 0
           end
           s = (+"").html_safe
+          s << view.sprite_icon('issue').html_safe unless Setting.gravatar_enabled? && issue.assigned_to
           s << view.assignee_avatar(issue.assigned_to, :size => 13, :class => 'icon-gravatar')
           s << view.link_to_issue(issue).html_safe
           s << view.content_tag(:input, nil, :type => 'checkbox', :name => 'ids[]',
@@ -739,20 +754,24 @@ module Redmine
           html_class << (version.behind_schedule? ? 'version-behind-schedule' : '') << " "
           html_class << (version.overdue? ? 'version-overdue' : '')
           html_class << ' version-closed' unless version.open?
-          if version.start_date && version.due_date && version.visible_fixed_issues.completed_percent
+          if version.due_date && version.start_date && version.visible_fixed_issues.completed_percent
             progress_date = calc_progress_date(version.start_date,
                                                version.due_date, version.visible_fixed_issues.completed_percent)
             html_class << ' behind-start-date' if progress_date < self.date_from
-            html_class << ' over-end-date' if progress_date > self.date_to
+            html_class << ' over-end-date' if progress_date > self.date_to && version.visible_fixed_issues.completed_percent > 0
           end
-          s = view.link_to_version(version).html_safe
+          s = (+"").html_safe
+          s << view.sprite_icon('package').html_safe
+          s << view.link_to_version(version).html_safe
           view.content_tag(:span, s, :class => html_class).html_safe
         when Project
           project = object
           html_class = +""
           html_class << 'icon icon-projects '
           html_class << (project.overdue? ? 'project-overdue' : '')
-          s = view.link_to_project(project).html_safe
+          s = (+"").html_safe
+          s << view.sprite_icon('projects').html_safe
+          s << view.link_to_project(project).html_safe
           view.content_tag(:span, s, :class => html_class).html_safe
         end
       end
@@ -765,10 +784,14 @@ module Redmine
           tag_options[:id] = "issue-#{object.id}"
           tag_options[:class] = "issue-subject hascontextmenu"
           tag_options[:title] = object.subject
-          children = object.leaf? ? [] : object.children & project_issues(object.project)
           has_children =
-            children.present? &&
-              (children.collect(&:fixed_version).uniq & [object.fixed_version]).present?
+            if object.leaf?
+              false
+            else
+              children = object.children & project_issues(object.project)
+              fixed_version_id = object.fixed_version_id
+              children.any? {|child| child.fixed_version_id == fixed_version_id}
+            end
         when Version
           tag_options[:id] = "version-#{object.id}"
           tag_options[:class] = "version-name"
@@ -787,12 +810,12 @@ module Redmine
           }
         end
         if has_children
-          content = view.content_tag(:span, nil, :class => 'icon icon-expanded expander') + content
+          content = view.content_tag(:span, view.sprite_icon('angle-down').html_safe, :class => 'icon icon-expanded expander') + content
           tag_options[:class] += ' open'
         else
           if params[:indent]
             params = params.dup
-            params[:indent] += 12
+            params[:indent] += 18
           end
         end
         style = "position: absolute;top:#{params[:top]}px;left:#{params[:indent]}px;"

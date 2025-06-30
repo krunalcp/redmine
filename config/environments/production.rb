@@ -93,4 +93,7 @@ Rails.application.configure do
 
   # No email in production log
   config.action_mailer.logger = nil
+
+  # Automatically execute asset precompilation on startup in case of changes have been detected in assets
+  config.assets.redmine_detect_update = true
 end

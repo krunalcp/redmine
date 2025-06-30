@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,10 +20,6 @@
 require_relative '../application_system_test_case'
 
 class RepositoriesTest < ApplicationSystemTestCase
-  fixtures :projects, :users, :email_addresses, :roles, :members, :member_roles, :enabled_modules,
-           :repositories, :issues, :issue_statuses, :changesets, :changes,
-           :issue_categories, :enumerations, :custom_fields, :custom_values, :trackers
-
   def setup
     @project = Project.find(1)
     @repository = Repository::Subversion.create(:project => @project,

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,8 +20,6 @@
 require_relative '../../test_helper'
 
 class Redmine::ApiTest::CustomFieldsTest < Redmine::ApiTest::Base
-  fixtures :users, :custom_fields
-
   test "GET /custom_fields.xml should return custom fields" do
     get '/custom_fields.xml', :headers => credentials('admin')
     assert_response :success
@@ -39,6 +37,8 @@ class Redmine::ApiTest::CustomFieldsTest < Redmine::ApiTest::Base
         end
         assert_select 'trackers[type=array]'
         assert_select 'roles[type=array]'
+        assert_select 'visible', :text => 'true'
+        assert_select 'editable', :text => 'true'
       end
     end
   end

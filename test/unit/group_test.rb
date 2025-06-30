@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,13 +20,6 @@
 require_relative '../test_helper'
 
 class GroupTest < ActiveSupport::TestCase
-  fixtures :projects, :trackers, :issue_statuses, :issues,
-           :enumerations, :users,
-           :projects_trackers,
-           :roles, :member_roles, :members,
-           :groups_users,
-           :watchers
-
   include Redmine::I18n
 
   def setup
@@ -38,6 +31,7 @@ class GroupTest < ActiveSupport::TestCase
     assert g.save
     g.reload
     assert_equal 'New group', g.name
+    assert_equal true, g.active?
   end
 
   def test_name_should_accept_255_characters

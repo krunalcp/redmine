@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,8 +20,6 @@
 require_relative '../test_helper'
 
 class WelcomeControllerTest < Redmine::ControllerTest
-  fixtures :projects, :news, :users, :members, :roles, :member_roles, :enabled_modules
-
   def setup
     Setting.default_language = 'en'
     User.current = nil
@@ -183,7 +181,7 @@ class WelcomeControllerTest < Redmine::ControllerTest
     WelcomeController.any_instance.stubs(:index).raises(::Unauthorized)
 
     get :index
-    assert_response 302
+    assert_response :found
     assert_redirected_to('/login?back_url='+CGI.escape('http://test.host/'))
   end
 
@@ -192,6 +190,6 @@ class WelcomeControllerTest < Redmine::ControllerTest
 
     @request.env["HTTP_X_REQUESTED_WITH"] = "XMLHttpRequest"
     get :index
-    assert_response 401
+    assert_response :unauthorized
   end
 end

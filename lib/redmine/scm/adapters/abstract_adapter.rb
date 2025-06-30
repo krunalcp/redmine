@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -206,8 +206,8 @@ module Redmine
           self.class.logger
         end
 
-        def shellout(cmd, options = {}, &block)
-          self.class.shellout(cmd, options, &block)
+        def shellout(cmd, options = {}, &)
+          self.class.shellout(cmd, options, &)
         end
 
         # Path to the file where scm stderr output is logged
@@ -441,7 +441,7 @@ module Redmine
       module ScmData
         def self.binary?(data)
           unless data.empty?
-            data.count("^ -~", "^\r\n").fdiv(data.size) > 0.3 || data.index("\x00")
+            data.index("\x00") || data.count("\x00-\x1f\x7f", "^\t\r\n").fdiv(data.size) > 0.1
           end
         end
       end

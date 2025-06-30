@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -21,15 +21,6 @@ require_relative '../test_helper'
 
 class JournalsHelperTest < Redmine::HelperTest
   include JournalsHelper
-
-  fixtures :projects, :trackers, :issue_statuses, :issues, :journals,
-           :enumerations, :issue_categories,
-           :projects_trackers,
-           :users, :roles, :member_roles, :members,
-           :enabled_modules,
-           :custom_fields,
-           :attachments,
-           :versions
 
   def test_journal_thumbnail_attachments_should_return_thumbnailable_attachments
     skip unless convert_installed?
@@ -56,10 +47,27 @@ class JournalsHelperTest < Redmine::HelperTest
     journals = issue.visible_journals_with_index # add indice
     journal_actions = render_journal_actions(issue, journals.first, {reply_links: true})
 
-    assert_select_in journal_actions, 'a[title=?][class="icon-only icon-comment"]', 'Quote'
+    assert_select_in journal_actions, 'a[title=?][class="icon icon-quote"]', 'Quote'
     assert_select_in journal_actions, 'a[title=?][class="icon-only icon-edit"]', 'Edit'
     assert_select_in journal_actions, 'div[class="drdn-items"] a[class="icon icon-del"]'
     assert_select_in journal_actions, 'div[class="drdn-items"] a[class="icon icon-copy-link"]'
+    assert_select_in journal_actions, 'span.reaction-button-wrapper'
+  end
+
+  def test_render_journal_actions_with_journal_without_notes
+    User.current = User.find(1)
+    issue = Issue.find(1)
+    issue.journals.first.update!(notes: '')
+
+    journals = issue.visible_journals_with_index
+
+    journal_actions = render_journal_actions(issue, journals.first, reply_links: true)
+
+    assert_select_in journal_actions, 'span.reaction-button-wrapper'
+    assert_select_in journal_actions, 'span.drdn'
+
+    assert_select_in journal_actions, 'a[class="icon-comment"]', false
+    assert_select_in journal_actions, 'a[class="icon-edit"]', false
   end
 
   def test_journal_thumbnail_attachments_should_be_in_the_same_order_as_the_journal_details

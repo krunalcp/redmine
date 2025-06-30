@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,26 +20,6 @@
 require_relative '../test_helper'
 
 class RepositoryTest < ActiveSupport::TestCase
-  fixtures :projects,
-           :trackers,
-           :projects_trackers,
-           :enabled_modules,
-           :repositories,
-           :issues,
-           :issue_statuses,
-           :issue_categories,
-           :changesets,
-           :changes,
-           :users,
-           :email_addresses,
-           :members,
-           :member_roles,
-           :roles,
-           :enumerations,
-           :user_preferences,
-           :watchers,
-           :versions
-
   include Redmine::I18n
 
   def setup
@@ -310,7 +290,7 @@ class RepositoryTest < ActiveSupport::TestCase
         )
     long_whitespace = "                                                "
     expected_comment = "This is a loooooooooooooooooooooooooooong comment"
-    comment = +"#{expected_comment}#{long_whitespace}\n"
+    comment = "#{expected_comment}#{long_whitespace}\n"
     3.times {comment << "#{long_whitespace}\n"}
     changeset = Changeset.new(
       :comments => comment, :commit_date => Time.now,
@@ -475,7 +455,7 @@ class RepositoryTest < ActiveSupport::TestCase
   def test_stats_by_author_reflect_changesets_and_changes
     repository = Repository.find(10)
 
-    expected = {"Dave Lopper"=>{:commits_count=>10, :changes_count=>3}}
+    expected = {"Dave Lopper"=>{:commits_count=>11, :changes_count=>3}}
     assert_equal expected, repository.stats_by_author
 
     set = Changeset.create!(
@@ -487,7 +467,7 @@ class RepositoryTest < ActiveSupport::TestCase
     )
     Change.create!(:changeset => set, :action => 'A', :path => '/path/to/file1')
     Change.create!(:changeset => set, :action => 'A', :path => '/path/to/file2')
-    expected = {"Dave Lopper"=>{:commits_count=>11, :changes_count=>5}}
+    expected = {"Dave Lopper"=>{:commits_count=>12, :changes_count=>5}}
     assert_equal expected, repository.stats_by_author
   end
 
@@ -496,7 +476,7 @@ class RepositoryTest < ActiveSupport::TestCase
     # to ensure things are dynamically linked to Users
     User.find_by_login("dlopper").update_attribute(:firstname, "Dave's")
     repository = Repository.find(10)
-    expected = {"Dave's Lopper"=>{:commits_count=>10, :changes_count=>3}}
+    expected = {"Dave's Lopper"=>{:commits_count=>11, :changes_count=>3}}
     assert_equal expected, repository.stats_by_author
   end
 
@@ -522,7 +502,7 @@ class RepositoryTest < ActiveSupport::TestCase
     # with committer="dlopper <dlopper@somefoo.net>"
     repository = Repository.find(10)
 
-    expected = {"Dave Lopper"=>{:commits_count=>10, :changes_count=>3}}
+    expected = {"Dave Lopper"=>{:commits_count=>11, :changes_count=>3}}
     assert_equal expected, repository.stats_by_author
 
     set = Changeset.create!(
@@ -533,7 +513,7 @@ class RepositoryTest < ActiveSupport::TestCase
       :comments => 'Another commit by foo.'
     )
 
-    expected = {"Dave Lopper"=>{:commits_count=>11, :changes_count=>3}}
+    expected = {"Dave Lopper"=>{:commits_count=>12, :changes_count=>3}}
     assert_equal expected, repository.stats_by_author
   end
 

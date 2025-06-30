@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -24,53 +24,64 @@ class User < Principal
   include Redmine::SafeAttributes
 
   # Different ways of displaying/sorting users
+  # rubocop:disable Lint/InterpolationCheck
   USER_FORMATS = {
     :firstname_lastname => {
       :string => '#{firstname} #{lastname}',
+      :initials => '#{firstname.to_s.first}#{lastname.to_s.first}',
       :order => %w(firstname lastname id),
       :setting_order => 1
     },
     :firstname_lastinitial => {
       :string => '#{firstname} #{lastname.to_s.chars.first}.',
+      :initials => '#{firstname.to_s.first}#{lastname.to_s.first}',
       :order => %w(firstname lastname id),
       :setting_order => 2
     },
     :firstinitial_lastname => {
       :string => '#{firstname.to_s.gsub(/(([[:alpha:]])[[:alpha:]]*\.?)/, \'\2.\')} #{lastname}',
+      :initials => '#{firstname.to_s.gsub(/(([[:alpha:]])[[:alpha:]]*\.?)/, \'\2.\').first}#{lastname.to_s.first}',
       :order => %w(firstname lastname id),
       :setting_order => 2
     },
     :firstname => {
       :string => '#{firstname}',
+      :initials => '#{firstname.to_s.first(2)}',
       :order => %w(firstname id),
       :setting_order => 3
     },
     :lastname_firstname => {
       :string => '#{lastname} #{firstname}',
+      :initials => '#{lastname.to_s.first}#{firstname.to_s.first}',
       :order => %w(lastname firstname id),
       :setting_order => 4
     },
     :lastnamefirstname => {
       :string => '#{lastname}#{firstname}',
+      :initials => '#{lastname.to_s.first}#{firstname.to_s.first}',
       :order => %w(lastname firstname id),
       :setting_order => 5
     },
     :lastname_comma_firstname => {
       :string => '#{lastname}, #{firstname}',
+      :initials => '#{lastname.to_s.first}#{firstname.to_s.first}',
       :order => %w(lastname firstname id),
       :setting_order => 6
     },
     :lastname => {
       :string => '#{lastname}',
+      :initials => '#{lastname.to_s.first(2)}',
       :order => %w(lastname id),
       :setting_order => 7
     },
     :username => {
       :string => '#{login}',
+      :initials => '#{login.to_s.first(2)}',
       :order => %w(login id),
       :setting_order => 8
     },
   }
+  # rubocop:enable Lint/InterpolationCheck
 
   MAIL_NOTIFICATION_OPTIONS = [
     ['all', :label_user_mail_option_all],
@@ -87,10 +98,10 @@ class User < Principal
                           :after_remove => Proc.new {|user, group| group.user_removed(user)}
   has_many :changesets, :dependent => :nullify
   has_one :preference, :dependent => :destroy, :class_name => 'UserPreference'
-  has_one :atom_token, lambda {where "action='feeds'"}, :class_name => 'Token'
-  has_one :api_token, lambda {where "action='api'"}, :class_name => 'Token'
-  has_one :email_address, lambda {where :is_default => true}, :autosave => true
+  has_one :atom_token, lambda {where "#{table.name}.action='feeds'"}, :class_name => 'Token'
+  has_one :api_token, lambda {where "#{table.name}.action='api'"}, :class_name => 'Token'
   has_many :email_addresses, :dependent => :delete_all
+  has_many :reactions, dependent: :delete_all
   belongs_to :auth_source
 
   scope :logged, lambda {where("#{User.table_name}.status <> #{STATUS_ANONYMOUS}")}
@@ -101,6 +112,7 @@ class User < Principal
   attr_accessor :password, :password_confirmation, :generate_password
   attr_accessor :last_before_login_on
   attr_accessor :remote_ip
+  attr_writer   :oauth_scope
 
   LOGIN_LENGTH_LIMIT = 60
   MAIL_LENGTH_LIMIT = 254
@@ -117,6 +129,7 @@ class User < Principal
     validates_format_of :password, :with => v, :message => :"must_contain_#{k}", :allow_blank => true, :if => Proc.new {Setting.password_required_char_classes.include?(k)}
   end
   validate :validate_password_length
+  validate :validate_password_complexity
   validate do
     if password_confirmation && password != password_confirmation
       errors.add(:password, :confirmation)
@@ -126,11 +139,11 @@ class User < Principal
   self.valid_statuses = [STATUS_ACTIVE, STATUS_REGISTERED, STATUS_LOCKED]
 
   before_validation :instantiate_email_address
-  before_create :set_mail_notification
   before_save   :generate_password_if_needed, :update_hashed_password
+  before_create :set_mail_notification
   before_destroy :remove_references_before_destroy
-  after_save :update_notified_project_ids, :destroy_tokens, :deliver_security_notification
   after_destroy :deliver_security_notification
+  after_save :update_notified_project_ids, :destroy_tokens, :deliver_security_notification
 
   scope :admin, (lambda do |*args|
     admin = args.size > 0 ? !!args.first : true
@@ -167,7 +180,7 @@ class User < Principal
   end
 
   alias :base_reload :reload
-  def reload(*args)
+  def reload(*)
     @name = nil
     @roles = nil
     @projects_by_role = nil
@@ -178,7 +191,7 @@ class User < Principal
     @builtin_role = nil
     @visible_project_ids = nil
     @managed_roles = nil
-    base_reload(*args)
+    base_reload(*)
   end
 
   def mail
@@ -272,8 +285,12 @@ class User < Principal
     end
   end
 
-  def active?
-    self.status == STATUS_ACTIVE
+  # Return user's initials based on name format
+  def initials(formatter = nil)
+    f = self.class.name_formatter(formatter)
+    format = f[:initials] || USER_FORMATS[:firstname_lastname][:initials]
+    initials = eval('"' + format + '"')
+    initials.upcase
   end
 
   def registered?
@@ -372,7 +389,7 @@ class User < Principal
     end
     chars = chars_list.flatten
     length.times {password << chars[SecureRandom.random_number(chars.size)]}
-    password = password.split('').shuffle(random: SecureRandom).join
+    password = password.chars.shuffle(random: SecureRandom).join
     self.password = password
     self.password_confirmation = password
     self
@@ -644,7 +661,7 @@ class User < Principal
   def projects_by_role
     return @projects_by_role if @projects_by_role
 
-    result = Hash.new([])
+    result = Hash.new {|_h, _k| []}
     project_ids_by_role.each do |role, ids|
       result[role] = Project.where(:id => ids).to_a
     end
@@ -677,7 +694,7 @@ class User < Principal
         hash[role_id] << project_id
       end
 
-      result = Hash.new([])
+      result = Hash.new {|_h, _k| []}
       if hash.present?
         roles = Role.where(:id => hash.keys).to_a
         hash.each do |role_id, proj_ids|
@@ -716,6 +733,20 @@ class User < Principal
     end
   end
 
+  def admin?
+    if authorized_by_oauth?
+      # when signed in via oauth, the user only acts as admin when the admin scope is set
+      super and @oauth_scope.include?(:admin)
+    else
+      super
+    end
+  end
+
+  # true if the user has signed in via oauth
+  def authorized_by_oauth?
+    !@oauth_scope.nil?
+  end
+
   # Return true if the user is allowed to do the specified action on a specific context
   # Action can be:
   # * a parameter-like Hash (eg. :controller => 'projects', :action => 'edit')
@@ -736,7 +767,7 @@ class User < Principal
 
       roles.any? do |role|
         (context.is_public? || role.member?) &&
-        role.allowed_to?(action) &&
+        role.allowed_to?(action, @oauth_scope) &&
         (block ? yield(role, self) : true)
       end
     elsif context && context.is_a?(Array)
@@ -755,7 +786,7 @@ class User < Principal
       # authorize if user has at least one role that has this permission
       roles = self.roles.to_a | [builtin_role]
       roles.any? do |role|
-        role.allowed_to?(action) &&
+        role.allowed_to?(action, @oauth_scope) &&
         (block ? yield(role, self) : true)
       end
     else
@@ -769,8 +800,8 @@ class User < Principal
   # NB: this method is not used anywhere in the core codebase as of
   # 2.5.2, but it's used by many plugins so if we ever want to remove
   # it it has to be carefully deprecated for a version or two.
-  def allowed_to_globally?(action, options={}, &block)
-    allowed_to?(action, nil, options.reverse_merge(:global => true), &block)
+  def allowed_to_globally?(action, options={}, &)
+    allowed_to?(action, nil, options.reverse_merge(:global => true), &)
   end
 
   def allowed_to_view_all_time_entries?(context)
@@ -886,7 +917,7 @@ class User < Principal
     project_ids.map(&:to_i)
   end
 
-  def self.prune(age)
+  def self.prune(age=30.days)
     User.where("created_on < ? AND status = ?", Time.now - age, STATUS_REGISTERED).destroy_all
   end
 
@@ -899,6 +930,16 @@ class User < Principal
     if !password.nil? && password.size < Setting.password_min_length.to_i
       errors.add(:password, :too_short, :count => Setting.password_min_length.to_i)
     end
+  end
+
+  def validate_password_complexity
+    return if password.blank? && generate_password?
+    return if password.nil?
+
+    # TODO: Enhance to check for more common and simple passwords
+    # like 'password', '123456', 'qwerty', etc.
+    bad_passwords = [login, firstname, lastname, mail] + email_addresses.map(&:address)
+    errors.add(:password, :too_simple) if bad_passwords.any? {|p| password.casecmp?(p)}
   end
 
   def instantiate_email_address
@@ -936,6 +977,7 @@ class User < Principal
     Issue.where(['author_id = ?', id]).update_all(['author_id = ?', substitute.id])
     Issue.where(['assigned_to_id = ?', id]).update_all('assigned_to_id = NULL')
     Journal.where(['user_id = ?', id]).update_all(['user_id = ?', substitute.id])
+    Journal.where(['updated_by_id = ?', id]).update_all(['updated_by_id = ?', substitute.id])
     JournalDetail.
       where(["property = 'attr' AND prop_key = 'assigned_to_id' AND old_value = ?", id.to_s]).
       update_all(['old_value = ?', substitute.id.to_s])

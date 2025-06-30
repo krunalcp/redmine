@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -38,7 +38,7 @@ module Redmine
       def target_lft
         scope_for_max_rgt = self.class.where(:root_id => root_id).where(:parent_id => parent_id)
         if id
-          scope_for_max_rgt = scope_for_max_rgt.where("id < ?", id)
+          scope_for_max_rgt = scope_for_max_rgt.where(id: ...id)
         end
         max_rgt = scope_for_max_rgt.maximum(:rgt)
         if max_rgt

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -23,13 +23,10 @@ class WatchersHelperTest < Redmine::HelperTest
   include WatchersHelper
   include AvatarsHelper
   include ERB::Util
-  include Rails.application.routes.url_helpers
-
-  fixtures :users, :issues
 
   test '#watcher_link with a non-watched object' do
     expected = link_to(
-      "Watch",
+      sprite_icon("watch", "Watch"),
       "/watchers/watch?object_id=1&object_type=issue",
       :remote => true, :method => 'post', :class => "issue-1-watcher icon icon-fav-off"
     )
@@ -38,7 +35,7 @@ class WatchersHelperTest < Redmine::HelperTest
 
   test '#watcher_link with a single object array' do
     expected = link_to(
-      "Watch",
+      sprite_icon("watch", "Watch"),
       "/watchers/watch?object_id=1&object_type=issue",
       :remote => true, :method => 'post', :class => "issue-1-watcher icon icon-fav-off"
     )
@@ -47,7 +44,7 @@ class WatchersHelperTest < Redmine::HelperTest
 
   test '#watcher_link with a multiple objects array' do
     expected = link_to(
-      "Watch",
+      sprite_icon("watch", "Watch"),
       "/watchers/watch?object_id%5B%5D=1&object_id%5B%5D=3&object_type=issue",
       :remote => true, :method => 'post', :class => "issue-bulk-watcher icon icon-fav-off"
     )
@@ -62,7 +59,7 @@ class WatchersHelperTest < Redmine::HelperTest
     Watcher.create!(:watchable => Issue.find(1), :user => User.find(1))
 
     expected = link_to(
-      "Unwatch",
+      sprite_icon("unwatch", "Unwatch"),
       "/watchers/watch?object_id=1&object_type=issue",
       :remote => true, :method => 'delete', :class => "issue-1-watcher icon icon-fav"
     )

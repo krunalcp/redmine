@@ -45,6 +45,9 @@ module RedmineApp
 
     config.action_mailer.delivery_job = "ActionMailer::MailDeliveryJob"
 
+    # Stop appending "utf8=✓" to form URLs
+    config.action_view.default_enforce_utf8 = false
+
     # Set Time.zone default to the specified zone and make Active Record auto-convert to this zone.
     # Run "rake -D time" for a list of tasks for finding time zone names. Default is UTC.
     # config.time_zone = 'Central Time (US & Canada)'
@@ -56,6 +59,7 @@ module RedmineApp
     config.i18n.enforce_available_locales = true
     config.i18n.fallbacks = true
     config.i18n.default_locale = 'en'
+    config.i18n.available_locales = Dir[Rails.root / 'config' / 'locales' / '*.yml'].map { |f| File.basename(f, '.yml').to_sym }
 
     # Configure the default encoding used in templates for Ruby 1.9.
     config.encoding = "utf-8"
@@ -87,6 +91,10 @@ module RedmineApp
 
     # Sets default plugin directory
     config.redmine_plugins_directory = 'plugins'
+
+    # Paths for plugin and theme assets. Nothing is set here, as the actual
+    # configuration is performed in the initializer.
+    config.assets.redmine_extension_paths = []
 
     # Configure log level here so that additional environment file
     # can change it (environments/ENV.rb would take precedence over it)

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,9 +20,6 @@
 require_relative '../test_helper'
 
 class PrincipalTest < ActiveSupport::TestCase
-  fixtures :users, :projects, :members, :member_roles, :roles,
-           :email_addresses
-
   def setup
     User.current = nil
   end
@@ -74,6 +71,12 @@ class PrincipalTest < ActiveSupport::TestCase
       expected = (Principal.all - projects.map(&:memberships).flatten.map(&:principal)).sort
       assert_equal expected, Principal.not_member_of(projects).sort
     end
+  end
+
+  def test_not_member_of_scope_should_accept_active_record_relation
+    projects = Project.where(id: [1, 2])
+    expected = (Principal.all - projects.map(&:memberships).flatten.map(&:principal)).sort
+    assert_equal expected, Principal.not_member_of(projects).sort
   end
 
   def test_not_member_of_scope_should_be_empty_for_no_projects

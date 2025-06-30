@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -17,7 +17,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-class Project < ActiveRecord::Base
+class Project < ApplicationRecord
   include Redmine::SafeAttributes
   include Redmine::NestedSet::ProjectNestedSet
 
@@ -87,13 +87,13 @@ class Project < ActiveRecord::Base
   validates_exclusion_of :identifier, :in => %w(new)
   validate :validate_parent
 
+  after_update :update_versions_from_hierarchy_change,
+               :if => proc {|project| project.saved_change_to_parent_id?}
+  before_destroy :delete_all_members
   after_save :update_inherited_members,
              :if => proc {|project| project.saved_change_to_inherit_members?}
   after_save :remove_inherited_member_roles, :add_inherited_member_roles,
              :if => proc {|project| project.saved_change_to_parent_id?}
-  after_update :update_versions_from_hierarchy_change,
-               :if => proc {|project| project.saved_change_to_parent_id?}
-  before_destroy :delete_all_members
 
   scope :has_module, (lambda do |mod|
     where("#{Project.table_name}.id IN (SELECT em.project_id FROM #{EnabledModule.table_name} em WHERE em.name=?)", mod.to_s)
@@ -110,7 +110,7 @@ class Project < ActiveRecord::Base
   scope :like, (lambda do |arg|
     if arg.present?
       pattern = "%#{sanitize_sql_like arg.to_s.strip}%"
-      where("LOWER(identifier) LIKE LOWER(:p) ESCAPE :s OR LOWER(name) LIKE LOWER(:p) ESCAPE :s", :p => pattern, :s => '\\')
+      where("LOWER(#{Project.table_name}.identifier) LIKE LOWER(:p) ESCAPE :s OR LOWER(#{Project.table_name}.name) LIKE LOWER(:p) ESCAPE :s", :p => pattern, :s => '\\')
     end
   end)
   scope :sorted, lambda {order(:lft)}
@@ -121,6 +121,7 @@ class Project < ActiveRecord::Base
   def initialize(attributes=nil, *args)
     super
 
+    # rubocop:disable Style/NegatedIf
     initialized = (attributes || {}).stringify_keys
     if !initialized.key?('identifier') && Setting.sequential_project_identifiers?
       self.identifier = Project.next_identifier
@@ -139,6 +140,7 @@ class Project < ActiveRecord::Base
         self.trackers = Tracker.sorted.to_a
       end
     end
+    # rubocop:enable Style/NegatedIf
   end
 
   def identifier=(identifier)
@@ -356,12 +358,12 @@ class Project < ActiveRecord::Base
     end
   end
 
-  def self.find_by_param(*args)
-    self.find(*args)
+  def self.find_by_param(*)
+    self.find(*)
   end
 
   alias :base_reload :reload
-  def reload(*args)
+  def reload(*)
     @principals = nil
     @users = nil
     @shared_versions = nil
@@ -379,7 +381,8 @@ class Project < ActiveRecord::Base
     @due_date = nil
     @override_members = nil
     @assignable_users = nil
-    base_reload(*args)
+    @last_activity_date = nil
+    base_reload(*)
   end
 
   def to_param
@@ -493,6 +496,7 @@ class Project < ActiveRecord::Base
   def rolled_up_statuses
     issue_status_ids = WorkflowTransition.
       where(:tracker_id => rolled_up_trackers.map(&:id)).
+      where('old_status_id <> new_status_id').
       distinct.
       pluck(:old_status_id, :new_status_id).
       flatten.
@@ -900,7 +904,7 @@ class Project < ActiveRecord::Base
       attrs['custom_fields'].reject! {|c| !editable_custom_field_ids.include?(c['id'].to_s)}
     end
 
-    super(attrs, user)
+    super
   end
 
   # Returns an auto-generated project identifier based on the last identifier used
@@ -1002,6 +1006,20 @@ class Project < ActiveRecord::Base
     user ||= User.current
     custom_field_values.select do |value|
       value.custom_field.visible_by?(project, user)
+    end
+  end
+
+  def last_activity_date
+    @last_activity_date || fetch_last_activity_date
+  end
+
+  # Preloads last activity date for a collection of projects
+  def self.load_last_activity_date(projects, user=User.current)
+    if projects.any?
+      last_activities = Redmine::Activity::Fetcher.new(User.current).events(nil, nil, :last_by_project => true).to_h
+      projects.each do |project|
+        project.instance_variable_set(:@last_activity_date, last_activities[project.id])
+      end
     end
   end
 
@@ -1311,5 +1329,10 @@ class Project < ActiveRecord::Base
       subproject.send :archive!
     end
     update_attribute :status, STATUS_ARCHIVED
+  end
+
+  def fetch_last_activity_date
+    latest_activities = Redmine::Activity::Fetcher.new(User.current, :project => self).events(nil, nil, :last_by_project => true)
+    latest_activities.empty? ? nil : latest_activities.to_h[self.id]
   end
 end

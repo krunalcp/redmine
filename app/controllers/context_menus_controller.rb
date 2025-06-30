@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -33,7 +33,7 @@ class ContextMenusController < ApplicationController
 
     @can = {
       :edit => @issues.all?(&:attributes_editable?),
-      :log_time => (@project && User.current.allowed_to?(:log_time, @project)),
+      :log_time => @issue&.time_loggable?,
       :copy => User.current.allowed_to?(:copy_issues, @projects) && Issue.allowed_target_projects.any?,
       :add_watchers => User.current.allowed_to?(:add_issue_watchers, @projects),
       :delete => @issues.all?(&:deletable?),

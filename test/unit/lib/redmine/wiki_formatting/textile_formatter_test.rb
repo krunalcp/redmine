@@ -2,7 +2,7 @@
 
 #
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -19,7 +19,6 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 require_relative '../../../../test_helper'
-require 'digest/md5'
 
 class Redmine::WikiFormatting::TextileFormatterTest < ActionView::TestCase
   def setup
@@ -467,19 +466,19 @@ class Redmine::WikiFormatting::TextileFormatterTest < ActionView::TestCase
     replacement = "New text"
 
     assert_equal(
-      [STR_WITHOUT_PRE[0], replacement, STR_WITHOUT_PRE[2..4]].flatten.join("\n\n"),
+      [STR_WITHOUT_PRE[0], replacement, STR_WITHOUT_PRE[2..4]].join("\n\n"),
       @formatter.new(TEXT_WITHOUT_PRE).update_section(2, replacement)
     )
     assert_equal(
-      [STR_WITHOUT_PRE[0..1], replacement, STR_WITHOUT_PRE[4]].flatten.join("\n\n"),
+      [STR_WITHOUT_PRE[0..1], replacement, STR_WITHOUT_PRE[4]].join("\n\n"),
       @formatter.new(TEXT_WITHOUT_PRE).update_section(3, replacement)
     )
     assert_equal(
-      [STR_WITHOUT_PRE[0..2], replacement, STR_WITHOUT_PRE[4]].flatten.join("\n\n"),
+      [STR_WITHOUT_PRE[0..2], replacement, STR_WITHOUT_PRE[4]].join("\n\n"),
       @formatter.new(TEXT_WITHOUT_PRE).update_section(5, replacement)
     )
     assert_equal(
-      [STR_WITHOUT_PRE[0..3], replacement].flatten.join("\n\n"),
+      [STR_WITHOUT_PRE[0..3], replacement].join("\n\n"),
       @formatter.new(TEXT_WITHOUT_PRE).update_section(6, replacement)
     )
     assert_equal TEXT_WITHOUT_PRE, @formatter.new(TEXT_WITHOUT_PRE).update_section(0, replacement)
@@ -489,15 +488,15 @@ class Redmine::WikiFormatting::TextileFormatterTest < ActionView::TestCase
   def test_update_section_with_hash_should_update_the_requested_section
     replacement = "New text"
     assert_equal(
-      [STR_WITHOUT_PRE[0], replacement, STR_WITHOUT_PRE[2..4]].flatten.join("\n\n"),
+      [STR_WITHOUT_PRE[0], replacement, STR_WITHOUT_PRE[2..4]].join("\n\n"),
       @formatter.new(TEXT_WITHOUT_PRE).
-        update_section(2, replacement, Digest::MD5.hexdigest(STR_WITHOUT_PRE[1]))
+        update_section(2, replacement, ActiveSupport::Digest.hexdigest(STR_WITHOUT_PRE[1]))
     )
   end
 
   def test_update_section_with_wrong_hash_should_raise_an_error
     assert_raise Redmine::WikiFormatting::StaleSectionError do
-      @formatter.new(TEXT_WITHOUT_PRE).update_section(2, "New text", Digest::MD5.hexdigest("Old text"))
+      @formatter.new(TEXT_WITHOUT_PRE).update_section(2, "New text", ActiveSupport::Digest.hexdigest("Old text"))
     end
   end
 
@@ -553,7 +552,7 @@ class Redmine::WikiFormatting::TextileFormatterTest < ActionView::TestCase
     text = STR_WITH_PRE.join("\n\n")
     replacement = "New text"
     assert_equal(
-      [STR_WITH_PRE[0..1], "New text"].flatten.join("\n\n"),
+      [STR_WITH_PRE[0..1], "New text"].join("\n\n"),
       @formatter.new(text).update_section(3, replacement)
     )
   end
@@ -809,6 +808,6 @@ class Redmine::WikiFormatting::TextileFormatterTest < ActionView::TestCase
     assert_kind_of Array, result
     assert_equal 2, result.size
     assert_equal expected, result.first, "section content did not match"
-    assert_equal Digest::MD5.hexdigest(expected), result.last, "section hash did not match"
+    assert_equal ActiveSupport::Digest.hexdigest(expected), result.last, "section hash did not match"
   end
 end

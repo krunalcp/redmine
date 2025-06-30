@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,13 +20,6 @@
 require_relative '../test_helper'
 
 class TimelogControllerTest < Redmine::ControllerTest
-  fixtures :projects, :enabled_modules, :roles, :members,
-           :member_roles, :issues, :time_entries, :users, :email_addresses,
-           :trackers, :enumerations, :issue_statuses,
-           :custom_fields, :custom_values,
-           :projects_trackers, :custom_fields_trackers,
-           :custom_fields_projects, :issue_categories, :versions
-
   include Redmine::I18n
 
   def setup
@@ -86,7 +79,7 @@ class TimelogControllerTest < Redmine::ControllerTest
     @request.session[:user_id] = 3
 
     get :new
-    assert_response 403
+    assert_response :forbidden
   end
 
   def test_new_should_select_default_role_activity
@@ -504,7 +497,7 @@ class TimelogControllerTest < Redmine::ControllerTest
         :hours => '7.3'
       }
     }
-    assert_response 403
+    assert_response :forbidden
   end
 
   def test_create_without_project_and_issue_should_fail
@@ -582,7 +575,7 @@ class TimelogControllerTest < Redmine::ControllerTest
       }
     end
 
-    assert_response 403
+    assert_response :forbidden
   end
 
   def test_create_without_project_with_failure
@@ -636,7 +629,7 @@ class TimelogControllerTest < Redmine::ControllerTest
         :issue_id => '5'
       }
     }
-    assert_response 302
+    assert_response :found
     entry.reload
 
     assert_equal 5, entry.issue_id
@@ -668,7 +661,7 @@ class TimelogControllerTest < Redmine::ControllerTest
         :project_id => '2'
       }
     }
-    assert_response 302
+    assert_response :found
     entry.reload
 
     assert_equal 2, entry.project_id
@@ -727,12 +720,14 @@ class TimelogControllerTest < Redmine::ControllerTest
   def test_get_bulk_edit
     @request.session[:user_id] = 2
 
-    get :bulk_edit, :params => {:ids => [1, 2]}
+    with_settings :timespan_format => 'minutes' do
+      get :bulk_edit, :params => {:ids => [1, 2]}
+    end
     assert_response :success
 
     assert_select 'ul#bulk-selection' do
       assert_select 'li', 2
-      assert_select 'li a', :text => '03/23/2007 - eCookbook: 4.25 hours (John Smith)'
+      assert_select 'li a', :text => '03/23/2007 - eCookbook: 4:15 hours (John Smith)'
     end
 
     assert_select 'form#bulk_edit_form[action=?]', '/time_entries/bulk_update' do
@@ -802,7 +797,7 @@ class TimelogControllerTest < Redmine::ControllerTest
     # update time entry activity
     post :bulk_update, :params => {:ids => [1, 2], :time_entry => {:activity_id => 9}}
 
-    assert_response 302
+    assert_response :found
     # check that the issues were updated
     assert_equal [9, 9], TimeEntry.where(:id => [1, 2]).collect {|i| i.activity_id}
   end
@@ -823,7 +818,7 @@ class TimelogControllerTest < Redmine::ControllerTest
     # update time entry activity
     post :bulk_update, :params => {:ids => [1, 2, 4], :time_entry => {:activity_id => 9}}
 
-    assert_response 302
+    assert_response :found
     # check that the issues were updated
     assert_equal [9, 9, 9], TimeEntry.where(:id => [1, 2, 4]).collect {|i| i.activity_id}
   end
@@ -836,7 +831,7 @@ class TimelogControllerTest < Redmine::ControllerTest
     assert ! user.allowed_to?(action, TimeEntry.find(5).project)
 
     post :bulk_update, :params => {:ids => [1, 5], :time_entry => {:activity_id => 9}}
-    assert_response 403
+    assert_response :forbidden
   end
 
   def test_bulk_update_with_edit_own_time_entries_permission
@@ -846,7 +841,7 @@ class TimelogControllerTest < Redmine::ControllerTest
     ids = (0..1).map {TimeEntry.generate!(:user => User.find(2)).id}
 
     post :bulk_update, :params => {:ids => ids, :time_entry => {:activity_id => 9}}
-    assert_response 302
+    assert_response :found
   end
 
   def test_bulk_update_with_edit_own_time_entries_permissions_should_be_denied_for_time_entries_of_other_user
@@ -855,7 +850,7 @@ class TimelogControllerTest < Redmine::ControllerTest
     Role.find_by_name('Manager').add_permission! :edit_own_time_entries
 
     post :bulk_update, :params => {:ids => [1, 2], :time_entry => {:activity_id => 9}}
-    assert_response 403
+    assert_response :forbidden
   end
 
   def test_bulk_update_custom_field
@@ -867,7 +862,7 @@ class TimelogControllerTest < Redmine::ControllerTest
         :time_entry => {:custom_field_values => {'10' => '0'}}
       }
     )
-    assert_response 302
+    assert_response :found
     assert_equal ["0", "0"], TimeEntry.where(:id => [1, 2]).collect {|i| i.custom_value_for(10).value}
   end
 
@@ -881,7 +876,7 @@ class TimelogControllerTest < Redmine::ControllerTest
         :time_entry => {:custom_field_values => {field.id.to_s => '__none__'}}
       }
     )
-    assert_response 302
+    assert_response :found
     assert_equal ["", ""], TimeEntry.where(:id => [1, 2]).collect {|i| i.custom_value_for(field).value}
   end
 
@@ -906,7 +901,7 @@ class TimelogControllerTest < Redmine::ControllerTest
     Role.find_by_name('Manager').remove_permission! :edit_time_entries
 
     post :bulk_update, :params => {:ids => [1, 2]}
-    assert_response 403
+    assert_response :forbidden
   end
 
   def test_destroy
@@ -1682,14 +1677,14 @@ class TimelogControllerTest < Redmine::ControllerTest
   end
 
   def test_index_with_query
-    query = TimeEntryQuery.new(:project_id => 1, :name => 'Time Entry Query', :visibility => 2)
+    query = TimeEntryQuery.new(:project_id => 1, :name => 'Time Entry Query', :description => 'Description for Time Entry Query', :visibility => 2)
     query.save!
     @request.session[:user_id] = 2
 
     get :index, :params => {:project_id => 'ecookbook', :query_id => query.id}
     assert_response :success
     assert_select 'h2', :text => query.name
-    assert_select '#sidebar a.selected', :text => query.name
+    assert_select '#sidebar a.query.selected[title=?]', query.description, :text => query.name
   end
 
   def test_index_atom_feed
@@ -1738,6 +1733,16 @@ class TimelogControllerTest < Redmine::ControllerTest
       get :index, :params => {:format => 'csv'}
       assert_response :success
       assert_equal 'text/csv; header=present', response.media_type
+
+      parsed_csv = CSV.parse(response.body)
+      assert_equal %w[Project Date User Activity Issue Comment Hours], parsed_csv.first
+      assert_equal(
+        [
+          'eCookbook', '03/12/2007', 'Redmine Admin', 'Design',
+          'Bug #1: Cannot print recipes', '', '150.00'
+        ],
+        parsed_csv.last
+      )
     end
   end
 

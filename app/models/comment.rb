@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -17,8 +17,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-class Comment < ActiveRecord::Base
+class Comment < ApplicationRecord
   include Redmine::SafeAttributes
+  include Redmine::Reaction::Reactable
+
   belongs_to :commented, :polymorphic => true, :counter_cache => true
   belongs_to :author, :class_name => 'User'
 
@@ -28,12 +30,18 @@ class Comment < ActiveRecord::Base
 
   safe_attributes 'comments'
 
+  delegate :visible?, to: :commented
+
   def comments=(arg)
     self.content = arg
   end
 
   def comments
     content
+  end
+
+  def project
+    commented.respond_to?(:project) ? commented.project : nil
   end
 
   private

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -91,19 +91,33 @@ module Redmine
       end
 
       def stylesheet_path(source)
-        "/themes/#{dir}/stylesheets/#{source}"
+        "#{asset_prefix}#{source}"
       end
 
       def image_path(source)
-        "/themes/#{dir}/images/#{source}"
+        "#{asset_prefix}#{source}"
       end
 
       def javascript_path(source)
-        "/themes/#{dir}/javascripts/#{source}"
+        "#{asset_prefix}#{source}"
       end
 
       def favicon_path
-        "/themes/#{dir}/favicon/#{favicon}"
+        "#{asset_prefix}#{favicon}"
+      end
+
+      def asset_prefix
+        "themes/#{dir}/"
+      end
+
+      def asset_paths
+        base_dir = Pathname.new(path)
+        paths = base_dir.children.select do |child|
+          child.directory? &&
+            child.basename.to_s != 'src' &&
+            !child.basename.to_s.start_with?('.')
+        end
+        Redmine::AssetPath.new(base_dir, paths, asset_prefix)
       end
 
       private
@@ -134,7 +148,7 @@ module Redmine
     end
 
     def self.scan_themes
-      dirs = Dir.glob("#{Rails.public_path}/themes/*").select do |f|
+      dirs = Dir.glob(["#{Rails.root}/app/assets/themes/*", "#{Rails.root}/themes/*"]).select do |f|
         # A theme should at least override application.css
         File.directory?(f) && File.exist?("#{f}/stylesheets/application.css")
       end

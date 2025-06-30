@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,8 +20,6 @@
 require_relative '../test_helper'
 
 class TwofaTest < Redmine::IntegrationTest
-  fixtures :projects, :users, :email_addresses
-
   test "should require twofa setup when configured" do
     with_settings twofa: "2" do
       assert Setting.twofa_required?

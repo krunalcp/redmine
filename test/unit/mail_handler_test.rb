@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,16 +20,6 @@
 require_relative '../test_helper'
 
 class MailHandlerTest < ActiveSupport::TestCase
-  fixtures :users, :projects, :enabled_modules, :roles,
-           :members, :member_roles, :users,
-           :email_addresses, :user_preferences,
-           :issues, :issue_statuses,
-           :journals, :journal_details,
-           :workflows, :trackers, :projects_trackers,
-           :versions, :enumerations, :issue_categories,
-           :custom_fields, :custom_fields_trackers, :custom_fields_projects, :custom_values,
-           :boards, :messages, :watchers, :news, :comments
-
   FIXTURES_PATH = File.dirname(__FILE__) + '/../fixtures/mail_handler'
 
   def setup

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,11 +20,6 @@
 require_relative '../application_system_test_case'
 
 class QuickJumpTest < ApplicationSystemTestCase
-  fixtures :projects, :users, :email_addresses, :roles, :members, :member_roles,
-           :trackers, :projects_trackers, :enabled_modules, :issue_statuses, :issues,
-           :enumerations, :custom_fields, :custom_values, :custom_fields_trackers,
-           :watchers, :journals, :journal_details
-
   def test_project_quick_jump
     log_user 'jsmith', 'jsmith'
     visit '/'

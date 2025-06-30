@@ -1,5 +1,5 @@
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -68,10 +68,9 @@ namespace :redmine do
     Repository.fetch_changesets
   end
 
-  desc 'Migrates and copies plugins assets.'
+  desc 'Migrates plugins.'
   task :plugins do
     Rake::Task["redmine:plugins:migrate"].invoke
-    Rake::Task["redmine:plugins:assets"].invoke
   end
 
 desc <<-DESC
@@ -154,17 +153,6 @@ DESC
       end
 
       Rake::Task["db:schema:dump"].invoke
-    end
-
-    desc 'Copies plugins assets into the public directory.'
-    task :assets => :environment do
-      name = ENV['NAME']
-
-      begin
-        Redmine::PluginLoader.mirror_assets(name)
-      rescue Redmine::PluginNotFound
-        abort "Plugin #{name} was not found."
-      end
     end
 
     desc 'Runs the plugins tests.'

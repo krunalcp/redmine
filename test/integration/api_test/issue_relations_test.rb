@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,15 +20,6 @@
 require_relative '../../test_helper'
 
 class Redmine::ApiTest::IssueRelationsTest < Redmine::ApiTest::Base
-  fixtures :projects, :trackers, :issue_statuses, :issues,
-           :enumerations, :users, :issue_categories,
-           :projects_trackers,
-           :roles,
-           :member_roles,
-           :members,
-           :enabled_modules,
-           :issue_relations
-
   test "GET /issues/:issue_id/relations.xml should return issue relations" do
     get '/issues/9/relations.xml', :headers => credentials('jsmith')
 
@@ -87,7 +78,7 @@ class Redmine::ApiTest::IssueRelationsTest < Redmine::ApiTest::Base
       )
     end
 
-    assert_response :unprocessable_entity
+    assert_response :unprocessable_content
     assert_select 'errors error', :text => /Relation type is not included in the list/
   end
 

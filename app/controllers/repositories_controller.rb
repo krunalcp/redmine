@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -89,7 +89,7 @@ class RepositoriesController < ApplicationController
     @entries = @repository.entries(@path, @rev)
     @changeset = @repository.find_changeset_by_name(@rev)
     if request.xhr?
-      @entries ? render(:partial => 'dir_list_content') : head(200)
+      @entries ? render(:partial => 'dir_list_content') : head(:ok)
     else
       (show_error_not_found; return) unless @entries
       @changesets = @repository.latest_changesets(@path, @rev)
@@ -264,7 +264,7 @@ class RepositoriesController < ApplicationController
     if params[:format] == 'diff'
       @diff = @repository.diff(@path, @rev, @rev_to)
       (show_error_not_found; return) unless @diff
-      filename = +"changeset_r#{@rev}"
+      filename = "changeset_r#{@rev}"
       filename << "_r#{@rev_to}" if @rev_to
       send_data @diff.join, :filename => "#{filename}.diff",
                             :type => 'text/x-patch',
@@ -279,7 +279,7 @@ class RepositoriesController < ApplicationController
         User.current.preference.save
       end
       @cache_key = "repositories/diff/#{@repository.id}/" +
-                      Digest::MD5.hexdigest("#{@path}-#{@rev}-#{@rev_to}-#{@diff_type}-#{current_language}")
+                      ActiveSupport::Digest.hexdigest("#{@path}-#{@rev}-#{@rev_to}-#{@diff_type}-#{current_language}")
       unless read_fragment(@cache_key)
         @diff = @repository.diff(@path, @rev, @rev_to)
         (show_error_not_found; return) unless @diff

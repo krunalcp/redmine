@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -19,7 +19,6 @@
 
 module Redmine
   class Notifiable < Struct.new(:name, :parent)
-
     def to_s
       name
     end
@@ -34,6 +33,7 @@ module Redmine
       notifications << Notifiable.new('issue_assigned_to_updated', 'issue_updated')
       notifications << Notifiable.new('issue_priority_updated', 'issue_updated')
       notifications << Notifiable.new('issue_fixed_version_updated', 'issue_updated')
+      notifications << Notifiable.new('issue_attachment_added', 'issue_updated')
       notifications << Notifiable.new('news_added')
       notifications << Notifiable.new('news_comment_added')
       notifications << Notifiable.new('document_added')

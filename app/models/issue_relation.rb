@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -17,14 +17,14 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-class IssueRelation < ActiveRecord::Base
+class IssueRelation < ApplicationRecord
   # Class used to represent the relations of an issue
   class Relations < Array
     include Redmine::I18n
 
-    def initialize(issue, *args)
+    def initialize(issue, *)
       @issue = issue
-      super(*args)
+      super(*)
     end
 
     def to_s(*args)

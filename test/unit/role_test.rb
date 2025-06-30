@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,8 +20,6 @@
 require_relative '../test_helper'
 
 class RoleTest < ActiveSupport::TestCase
-  fixtures :roles, :workflows, :trackers, :users
-
   def setup
     User.current = nil
   end
@@ -175,6 +173,32 @@ class RoleTest < ActiveSupport::TestCase
 
     role.set_permission_trackers :view_issues, :all
     assert_equal false, role.permissions_tracker_ids?(:view_issues, 1)
+  end
+
+  def test_allowed_to_with_symbol
+    role = Role.create!(:name => 'Test', :permissions => [:view_issues])
+    assert_equal true, role.allowed_to?(:view_issues)
+    assert_equal false, role.allowed_to?(:add_issues)
+  end
+
+  def test_allowed_to_with_symbol_and_scope
+    role = Role.create!(:name => 'Test', :permissions => [:view_issues, :delete_issues])
+    assert_equal true, role.allowed_to?(:view_issues, [:view_issues, :add_issues])
+    assert_equal false, role.allowed_to?(:add_issues, [:view_issues, :add_issues])
+    assert_equal false, role.allowed_to?(:delete_issues, [:view_issues, :add_issues])
+  end
+
+  def test_allowed_to_with_hash
+    role = Role.create!(:name => 'Test', :permissions => [:view_issues])
+    assert_equal true, role.allowed_to?(:controller => 'issues', :action => 'show')
+    assert_equal false, role.allowed_to?(:controller => 'issues', :action => 'create')
+  end
+
+  def test_allowed_to_with_hash_and_scope
+    role = Role.create!(:name => 'Test', :permissions => [:view_issues, :delete_issues])
+    assert_equal true, role.allowed_to?({:controller => 'issues', :action => 'show'}, [:view_issues, :add_issues])
+    assert_equal false, role.allowed_to?({:controller => 'issues', :action => 'create'}, [:view_issues, :add_issues])
+    assert_equal false, role.allowed_to?({:controller => 'issues', :action => 'destroy'}, [:view_issues, :add_issues])
   end
 
   def test_has_permission_without_permissions

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,8 +20,6 @@
 require_relative '../../../../test_helper'
 
 class Redmine::Acts::PositionedWithScopeTest < ActiveSupport::TestCase
-  fixtures :projects, :boards
-
   def test_create_should_default_to_last_position
     b = Board.generate!(:project_id => 1)
     assert_equal 3, b.reload.position

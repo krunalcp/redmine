@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -27,6 +27,7 @@ class BazaarAdapterTest < ActiveSupport::TestCase
     def setup
       @adapter = Redmine::Scm::Adapters::BazaarAdapter.
                    new(File.join(REPOSITORY_PATH, "trunk"))
+      skip "SCM command is unavailable" unless @adapter.class.client_available
     end
 
     def test_scm_version

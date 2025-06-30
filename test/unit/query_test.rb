@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -21,16 +21,6 @@ require_relative '../test_helper'
 
 class QueryTest < ActiveSupport::TestCase
   include Redmine::I18n
-
-  fixtures :projects, :enabled_modules, :users, :user_preferences, :members,
-           :member_roles, :roles, :trackers, :issue_statuses,
-           :issue_categories, :enumerations, :issues,
-           :watchers, :custom_fields, :custom_values, :versions,
-           :queries,
-           :projects_trackers,
-           :custom_fields_trackers,
-           :workflows, :journals,
-           :attachments, :time_entries
 
   def setup
     User.current = nil
@@ -633,7 +623,7 @@ class QueryTest < ActiveSupport::TestCase
     query.add_filter('due_date', '><t+', ['15'])
     issues = find_issues_with_query(query)
     assert !issues.empty?
-    issues.each {|issue| assert(issue.due_date >= Date.today && issue.due_date <= (Date.today + 15))}
+    issues.each {|issue| assert(issue.due_date.between?(Date.today, (Date.today + 15)))}
   end
 
   def test_operator_less_than_ago
@@ -651,7 +641,7 @@ class QueryTest < ActiveSupport::TestCase
     query.add_filter('due_date', '><t-', ['3'])
     issues = find_issues_with_query(query)
     assert !issues.empty?
-    issues.each {|issue| assert(issue.due_date >= (Date.today - 3) && issue.due_date <= Date.today)}
+    issues.each {|issue| assert(issue.due_date.between?((Date.today - 3), Date.today))}
   end
 
   def test_operator_more_than_ago
@@ -1373,10 +1363,10 @@ class QueryTest < ActiveSupport::TestCase
     result = query.results_scope
 
     bookmarks = User.current.bookmarked_project_ids
-    assert_equal Project.where(parent_id: bookmarks).ids, result.map(&:id).sort
+    assert_equal Project.where(parent_id: bookmarks).ids.sort, result.map(&:id).sort
   end
 
-  def test_filter_watched_issues
+  def test_filter_watched_issues_by_user
     User.current = User.find(1)
     query =
       IssueQuery.new(
@@ -1384,7 +1374,7 @@ class QueryTest < ActiveSupport::TestCase
         :filters => {
           'watcher_id' => {
             :operator => '=',
-            :values => ['me']
+            :values => [User.current.id]
           }
         }
       )
@@ -1394,13 +1384,17 @@ class QueryTest < ActiveSupport::TestCase
     assert_equal Issue.visible.watched_by(User.current).sort_by(&:id), result.sort_by(&:id)
   end
 
-  def test_filter_watched_issues_with_groups_also
+  def test_filter_watched_issues_by_me_should_include_user_groups
     user = User.find(2)
     group = Group.find(10)
     group.users << user
     Issue.find(3).add_watcher(user)
     Issue.find(7).add_watcher(group)
+    manager = Role.find(1)
+    # view_issue_watchers permission is not required to see watched issues by current user or user groups
+    manager.remove_permission! :view_issue_watchers
     User.current = user
+
     query =
       IssueQuery.new(
         :name => '_',
@@ -1412,9 +1406,40 @@ class QueryTest < ActiveSupport::TestCase
         }
       )
     result = find_issues_with_query(query)
+
     assert_not_nil result
     assert !result.empty?
     assert_equal [3, 7], result.sort_by(&:id).pluck(:id)
+  end
+
+  def test_filter_watched_issues_by_group_should_include_only_projects_with_permission
+    user = User.find(2)
+    group = Group.find(10)
+
+    Issue.find(4).add_watcher(group)
+    Issue.find(2).add_watcher(group)
+
+    developer = Role.find(2)
+    developer.remove_permission! :view_issue_watchers
+
+    User.current = user
+
+    query =
+      IssueQuery.new(
+        :name => '_',
+        :filters => {
+          'watcher_id' => {
+            :operator => '=',
+            :values => [group.id]
+          }
+        }
+      )
+    result = find_issues_with_query(query)
+
+    assert_not_nil result
+
+    # "Developer" role doesn't have the view_issue_watchers permission of issue's #4 project (OnlineStore).
+    assert_equal [2], result.pluck(:id)
   end
 
   def test_filter_unwatched_issues
@@ -2301,7 +2326,7 @@ class QueryTest < ActiveSupport::TestCase
     values =
       issues.filter_map do |i|
         begin
-          Kernel.Float(i.custom_value_for(c.custom_field).to_s)
+          Kernel.Float(i.custom_value_for(c.custom_field).to_s, exception: false)
         rescue
           nil
         end
@@ -2388,6 +2413,11 @@ class QueryTest < ActiveSupport::TestCase
     assert_include :estimated_hours, q.available_totalable_columns.map(&:name)
   end
 
+  def test_available_totalable_columns_should_include_estimated_remaining_hours
+    q = IssueQuery.new
+    assert_include :estimated_remaining_hours, q.available_totalable_columns.map(&:name)
+  end
+
   def test_available_totalable_columns_should_include_spent_hours
     User.current = User.find(1)
 
@@ -2458,6 +2488,29 @@ class QueryTest < ActiveSupport::TestCase
     assert_equal(
       {nil => 3.5, User.find(2) => 5.5, User.find(3) => 1.1},
       q.total_by_group_for(:estimated_hours)
+    )
+  end
+
+  def test_total_for_estimated_remaining_hours
+    Issue.delete_all
+    Issue.generate!(:estimated_hours => 5.5, :done_ratio => 50)
+    Issue.generate!(:estimated_hours => 1.1, :done_ratio => 100)
+    Issue.generate!
+
+    q = IssueQuery.new
+    assert_equal 2.75, q.total_for(:estimated_remaining_hours)
+  end
+
+  def test_total_by_group_for_estimated_remaining_hours
+    Issue.delete_all
+    Issue.generate!(:estimated_hours => 5.5, :assigned_to_id => 2, :done_ratio => 50)
+    Issue.generate!(:estimated_hours => 1.1, :assigned_to_id => 3, :done_ratio => 100)
+    Issue.generate!(:estimated_hours => 3.5, :done_ratio => 0)
+
+    q = IssueQuery.new(:group_by => 'assigned_to')
+    assert_equal(
+      {nil => 3.5, User.find(2) => 2.75, User.find(3) => 0},
+      q.total_by_group_for(:estimated_remaining_hours)
     )
   end
 
@@ -2788,6 +2841,28 @@ class QueryTest < ActiveSupport::TestCase
     assert ! query.available_filters["assigned_to_role"][:values].include?(['Anonymous', '5'])
   end
 
+  def test_available_filters_should_include_author_group_filter
+    query = IssueQuery.new
+    assert query.available_filters.key?("author.group")
+    assert_equal :list, query.available_filters["author.group"][:type]
+    assert query.available_filters["author.group"][:values].present?
+    assert_equal Group.givable.sort.map {|g| [g.name, g.id.to_s]},
+                 query.available_filters["author.group"][:values].sort
+  end
+
+  def test_available_filters_should_include_author_role_filter
+    query = IssueQuery.new
+    assert query.available_filters.key?("author.role")
+    assert_equal :list, query.available_filters["author.role"][:type]
+
+    assert query.available_filters["author.role"][:values].include?(['Manager', '1'])
+    assert query.available_filters["author.role"][:values].include?(['Developer', '2'])
+    assert query.available_filters["author.role"][:values].include?(['Reporter', '3'])
+
+    assert_not query.available_filters["author.role"][:values].include?(['Non member', '4'])
+    assert_not query.available_filters["author.role"][:values].include?(['Anonymous', '5'])
+  end
+
   def test_available_filters_should_include_custom_field_according_to_user_visibility
     visible_field = IssueCustomField.generate!(:is_for_all => true, :is_filter => true, :visible => true)
     hidden_field = IssueCustomField.generate!(:is_for_all => true, :is_filter => true, :visible => false, :role_ids => [1])
@@ -2956,6 +3031,44 @@ class QueryTest < ActiveSupport::TestCase
     @query.add_filter('assigned_to_role', '!', [@empty_role.id.to_s])
 
     assert_query_result [@issue1, @issue2, @issue3, @issue4, @issue5], @query
+  end
+
+  def test_author_group_filter_should_return_issues_with_or_without_author_in_group
+    project = Project.generate!
+    author = User.generate!
+    author_group = Group.generate!
+    not_author_group = Group.generate!
+    author.groups << author_group
+    issues = Array.new(3) { Issue.generate!(:project => project, :author => author) }
+
+    query = IssueQuery.new(:name => '_', :project => project)
+    query.add_filter('author_group', '=', [author_group.id.to_s])
+    assert_equal 3, query.issues.count
+    assert_query_result issues, query
+
+    query = IssueQuery.new(:name => '_', :project => project)
+    query.add_filter('author_group', '!', [not_author_group.id.to_s])
+    assert_equal 3, query.issues.count
+    assert_query_result issues, query
+  end
+
+  def test_author_role_filter_should_return_issues_with_or_without_author_in_role
+    project = Project.generate!
+    author = User.generate!
+    manager_role = Role.find_by_name('Manager')
+    developer_role = Role.find_by_name('Developer')
+    User.add_to_project(author, project, manager_role)
+    issues = Array.new(3) { Issue.generate!(:project => project, :author => author) }
+
+    query = IssueQuery.new(:name => 'issues generated by manager', :project => project)
+    query.add_filter('author_role', '=', [manager_role.id.to_s])
+    assert_equal 3, query.issues.count
+    assert_query_result issues, query
+
+    query = IssueQuery.new(:name => 'issues does not generated by developer', :project => project)
+    query.add_filter('author_role', '!', [developer_role.id.to_s])
+    assert_equal 3, query.issues.count
+    assert_query_result issues, query
   end
 
   def test_query_column_should_accept_a_symbol_as_caption
@@ -3280,5 +3393,20 @@ class QueryTest < ActiveSupport::TestCase
     query.display_type = 'invalid'
 
     assert_equal 'board', query.display_type
+  end
+
+  def test_assigned_to_values_should_be_sorted_by_status_and_name
+    User.delete_all
+    20.times do |i|
+      str = format('%03d', i)
+      status = i.even? ? User::STATUS_ACTIVE : User::STATUS_LOCKED
+      User.create!(firstname: str, lastname: str, login: str, mail: "#{str}@example.net", status: status)
+    end
+    query = IssueQuery.new(:name => '_')
+    query.stubs(:users).returns(User.all)
+
+    expected_names = User.order(:status, :firstname).all.map(&:name)
+    assigned_to_values = query.assigned_to_values
+    assert_equal expected_names, assigned_to_values[1..].map(&:first)
   end
 end

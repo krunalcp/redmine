@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,8 +20,6 @@
 require_relative '../test_helper'
 
 class SettingTest < ActiveSupport::TestCase
-  fixtures :users
-
   def setup
     User.current = nil
   end
@@ -148,5 +146,9 @@ class SettingTest < ActiveSupport::TestCase
 
   def test_default_text_formatting_for_new_installations_is_common_mark
     assert_equal 'common_mark', Setting.text_formatting
+  end
+
+  def test_default_wiki_tablesort_enabled_for_new_installations_is_disabled
+    assert_equal "0", Setting.wiki_tablesort_enabled
   end
 end

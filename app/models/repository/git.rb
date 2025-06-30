@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 # Copyright (C) 2007  Patrick Aljord patcito@ŋmail.com
 #
 # This program is free software; you can redistribute it and/or
@@ -25,10 +25,10 @@ class Repository::Git < Repository
 
   safe_attributes 'report_last_commit'
 
-  def self.human_attribute_name(attribute_key_name, *args)
+  def self.human_attribute_name(attribute_key_name, *)
     attr_name = attribute_key_name.to_s
     attr_name = 'path_to_repository' if attr_name == 'url'
-    super(attr_name, *args)
+    super(attr_name, *)
   end
 
   def self.scm_adapter_class
@@ -219,7 +219,7 @@ class Repository::Git < Repository
         :repository   => self,
         :revision     => rev.identifier,
         :scmid        => rev.scmid,
-        :committer    => rev.author,
+        :committer    => rev.author.truncate(255),
         :committed_on => rev.time,
         :comments     => rev.message,
         :parents      => parents

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,15 +20,6 @@
 require_relative '../../test_helper'
 
 class Redmine::ApiTest::FilesTest < Redmine::ApiTest::Base
-  fixtures :projects,
-           :users,
-           :members,
-           :roles,
-           :member_roles,
-           :enabled_modules,
-           :attachments,
-           :versions
-
   test "GET /projects/:project_id/files.xml should return the list of uploaded files" do
     get '/projects/1/files.xml', :headers => credentials('jsmith')
     assert_response :success

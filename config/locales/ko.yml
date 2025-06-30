@@ -140,8 +140,6 @@ ko:
       words_connector: ", "
       two_words_connector: "과 "
       last_word_connector: ", "
-      sentence_connector: "그리고"
-      skip_last_comma: false
 
   activerecord:
     errors:
@@ -487,7 +485,7 @@ ko:
   label_logout: 로그아웃
   label_help: 도움말
   label_reported_issues: 보고한 일감
-  label_assigned_to_me_issues: 내가 맡은 일감 
+  label_assigned_to_me_issues: 내가 맡은 일감
   label_registered_on: 등록시각
   label_activity: 작업내역
   label_user_activity: "%{value}의 작업내역"
@@ -603,7 +601,6 @@ ko:
   label_day_plural: 일
   label_repository: 저장소
   label_repository_plural: 저장소
-  label_browse: 저장소 둘러보기
   label_revision: 개정판
   label_revision_plural: 개정판
   label_associated_revisions: 관련된 개정판들
@@ -649,7 +646,7 @@ ko:
   label_options: 옵션
   label_copy_workflow_from: 업무흐름 복사하기
   label_permissions_report: 권한 보고서
-  label_watched_issues: 지켜보고 있는 일감 
+  label_watched_issues: 지켜보고 있는 일감
   label_related_issues: 연결된 일감
   label_applied_status: 적용된 상태
   label_loading: 읽는 중...
@@ -848,7 +845,7 @@ ko:
   enumeration_doc_categories: 문서 범주
   enumeration_activities: 작업분류(시간추적)
 
-  field_issue_to: 관련 일감 
+  field_issue_to: 관련 일감
   label_view_all_revisions: 모든 개정판 표시
   label_tag: 태그(Tag)
   label_branch: 브랜치(Branch)
@@ -926,7 +923,7 @@ ko:
   error_can_not_delete_custom_field: 사용자 정의 필드를 삭제할 수 없습니다.
   error_unable_to_connect: 연결할 수 없습니다((%{value})
   error_can_not_remove_role: 이 역할은 현재 사용 중이이서 삭제할 수 없습니다.
-  error_can_not_delete_tracker: 이 유형의 일감들이 있어서 삭제할 수 없습니다.
+  error_can_not_delete_tracker_html: 이 유형의 일감들이 있어서 삭제할 수 없습니다.<p>The following projects have issues with this tracker:<br>%{projects}</p>
   field_principal: 신원
   notice_failed_to_save_members: "%{errors}:구성원을 저장 중 실패하였습니다"
   text_zoom_out: 더 작게
@@ -1022,7 +1019,7 @@ ko:
   notice_failed_to_save_time_entries: "%{total} 개의 시간입력중 다음 %{count} 개의 저장에 실패했습니다:: %{ids}."
   label_x_issues:
     zero:  0 일감
-    one:   1 일감 
+    one:   1 일감
     other: "%{count} 일감"
   label_repository_new: 저장소 추가
   field_repository_is_default: 주 저장소
@@ -1413,7 +1410,7 @@ ko:
     (%{identifier}) below.
   button_add_subtask: Add subtask
   notice_invalid_watcher: 'Invalid watcher: User will not receive any notifications
-    because it does not have access to view this object.'
+    because they do not have access to view this object.'
   button_fetch_changesets: Fetch commits
   permission_view_message_watchers: View message watchers list
   permission_add_message_watchers: Add message watchers
@@ -1508,3 +1505,47 @@ ko:
   text_default_active_job_queue_changed: Default queue adapter which is well suited
     only for dev/test changed
   label_option_auto_lang: auto
+  label_issue_attachment_added: Attachment added
+  field_estimated_remaining_hours: Estimated remaining time
+  field_last_activity_date: Last activity
+  setting_issue_done_ratio_interval: Done ratio options interval
+  setting_copy_attachments_on_issue_copy: Copy attachments on copy
+  field_thousands_delimiter: Thousands delimiter
+  label_involved_principals: Author / Previous assignee
+  label_attachment_summary:
+    zero: "%{filename}"
+    one: "%{filename} and 1 file"
+    other: "%{filename} and %{count} files"
+  setting_wiki_tablesort_enabled: Javascript based table sorting in wiki content
+  label_progressbar: Progress bar
+  error_spent_on_closed_issue: Cannot log time on a closed issue
+  setting_timelog_accept_closed_issues: Accept time logs on closed issues
+  setting_related_issues_default_columns: Related and sub issues list defaults
+  setting_display_related_issues_table_headers: Show table headers
+  error_can_not_remove_role_reason_members_html: "<p>The following projects have members
+    with this role:<br>%{projects}</p>"
+  setting_reactions_enabled: Enable reactions
+  reaction_text_x_other_users:
+    one: 1 other
+    other: "%{count} others"
+  text_setting_gravatar_default_initials_html: Users' initials are sent to <a href="https://www.gravatar.com">https://www.gravatar.com</a>
+    to generate their avatars.
+  permission_view_project: View projects
+  permission_search_project: Search projects
+  permission_view_members: View project members
+  label_oauth_permission_admin: Administrate this Redmine
+  label_oauth_admin_access: Administration
+  label_oauth_application_plural: Applications
+  label_oauth_authorized_application_plural: Authorized applications
+  text_oauth_admin_permission: Full administrative access. When authorized by an Administrator,
+    this application will be able to read and write all data and impersonate other users.
+  text_oauth_admin_permission_info: This application requests full administrative access.
+    If you are an Administrator (or become one in the future), it will be able to read
+    and write all data and impersonate other users on your behalf. If you want to avoid
+    this, authorize it as a user without Administrator privileges instead.
+  text_oauth_copy_secret_now: Copy the secret to a safe place now, it will not be shown
+    again.
+  text_oauth_implicit_permissions: View your name, login and primary email address
+  text_oauth_info_scopes: Select the scopes this application may request. The application
+    will not be allowed to do more than what is selected here. It will also always be
+    limited by the roles and project memberships of the user who authorized it.

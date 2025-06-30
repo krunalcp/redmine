@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -17,12 +17,15 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-class Issue < ActiveRecord::Base
+class Issue < ApplicationRecord
   include Redmine::SafeAttributes
   include Redmine::Utils::DateCalculation
   include Redmine::I18n
+  before_validation :default_assign, on: :create
+  before_validation :clear_disabled_fields
   before_save :set_parent_id
   include Redmine::NestedSet::IssueNestedSet
+  include Redmine::Reaction::Reactable
 
   belongs_to :project
   belongs_to :tracker
@@ -107,8 +110,6 @@ class Issue < ActiveRecord::Base
     end
   end)
 
-  before_validation :default_assign, on: :create
-  before_validation :clear_disabled_fields
   before_save :close_duplicates, :update_done_ratio_from_issue_status,
               :force_updated_on_change, :update_closed_on
   after_save do |issue|
@@ -116,11 +117,11 @@ class Issue < ActiveRecord::Base
       issue.send :after_project_change
     end
   end
+  after_destroy :update_parent_attributes
   after_save :reschedule_following_issues, :update_nested_set_attributes,
              :update_parent_attributes, :delete_selected_attachments, :create_journal
   # Should be after_create but would be called before previous after_save callbacks
   after_save :after_create_from_copy
-  after_destroy :update_parent_attributes
   # add_auto_watcher needs to run before sending notifications, thus it needs
   # to be added after send_notification (after_ callbacks are run in inverse order)
   # https://api.rubyonrails.org/v5.2.3/classes/ActiveSupport/Callbacks/ClassMethods.html#method-i-set_callback
@@ -186,6 +187,11 @@ class Issue < ActiveRecord::Base
       end
       visible
     end
+  end
+
+  # Returns true if user or current user is allowed to log time on the issue
+  def time_loggable?(user=User.current)
+    user.allowed_to?(:log_time, project) && (Setting.timelog_accept_closed_issues? || !closed?)
   end
 
   # Returns true if user or current user is allowed to edit or add notes to the issue
@@ -263,7 +269,7 @@ class Issue < ActiveRecord::Base
   end
 
   alias :base_reload :reload
-  def reload(*args)
+  def reload(*)
     @workflow_rule_by_attribute = nil
     @assignable_versions = nil
     @relations = nil
@@ -272,7 +278,7 @@ class Issue < ActiveRecord::Base
     @total_estimated_hours = nil
     @last_updated_by = nil
     @last_notes = nil
-    base_reload(*args)
+    base_reload(*)
   end
 
   # Overrides Redmine::Acts::Customizable::InstanceMethods#available_custom_fields
@@ -314,9 +320,9 @@ class Issue < ActiveRecord::Base
         attachement.copy(:container => self)
       end
     end
+
     unless options[:watchers] == false
-      self.watcher_user_ids =
-        issue.watcher_users.select{|u| u.status == User::STATUS_ACTIVE}.map(&:id)
+      self.watcher_user_ids = issue.visible_watcher_users.select{|u| u.status == User::STATUS_ACTIVE}.map(&:id)
     end
     @copied_from = issue
     @copy_options = options
@@ -464,7 +470,7 @@ class Issue < ActiveRecord::Base
   end
 
   # Overrides assign_attributes so that project and tracker get assigned first
-  def assign_attributes(new_attributes, *args)
+  def assign_attributes(new_attributes, *)
     return if new_attributes.nil?
 
     attrs = new_attributes.dup
@@ -475,7 +481,7 @@ class Issue < ActiveRecord::Base
         send :"#{attr}=", attrs.delete(attr)
       end
     end
-    super(attrs, *args)
+    super(attrs, *)
   end
 
   def attributes=(new_attributes)
@@ -911,7 +917,8 @@ class Issue < ActiveRecord::Base
     result = journals.
       preload(:details).
       preload(:user => :email_address).
-      reorder(:created_on, :id).to_a
+      reorder(:created_on, :id).
+      to_a
 
     result.each_with_index {|j, i| j.indice = i + 1}
 
@@ -922,7 +929,22 @@ class Issue < ActiveRecord::Base
     end
     Journal.preload_journals_details_custom_fields(result)
     result.select! {|journal| journal.notes? || journal.visible_details.any?}
+
+    Journal.preload_reaction_details(result)
+
     result
+  end
+
+  # Returns the assignee immediately prior to the current one from the issue history
+  def prior_assigned_to
+    prior_assigned_to_id =
+      journals.joins(:details)
+              .where(details: {prop_key: 'assigned_to_id'})
+              .where.not(details: {old_value: nil})
+              .order(id: :desc)
+              .pick(:old_value)
+
+    prior_assigned_to_id && Principal.find_by(id: prior_assigned_to_id)
   end
 
   # Returns the initial status of the issue
@@ -1018,7 +1040,7 @@ class Issue < ActiveRecord::Base
 
   # Returns true if this issue is blocked by another issue that is still open
   def blocked?
-    !relations_to.detect {|ir| ir.relation_type == 'blocks' && !ir.issue_from.closed?}.nil?
+    relations_to.any? {|ir| ir.relation_type == 'blocks' && ir.issue_from&.closed? == false}
   end
 
   # Returns true if this issue can be closed and if not, returns false and populates the reason
@@ -1153,7 +1175,7 @@ class Issue < ActiveRecord::Base
       if leaf?
         spent_hours
       else
-        self_and_descendants.joins(:time_entries).sum("#{TimeEntry.table_name}.hours").to_f || 0.0
+        self_and_descendants.joins(:time_entries).sum("#{TimeEntry.table_name}.hours").to_f
       end
   end
 
@@ -1163,6 +1185,11 @@ class Issue < ActiveRecord::Base
     else
       @total_estimated_hours ||= self_and_descendants.visible.sum(:estimated_hours)
     end
+  end
+
+  # Returns the number of estimated remaining hours on this issue
+  def estimated_remaining_hours
+    (estimated_hours || 0) * (100 - (done_ratio || 0)) / 100
   end
 
   def relations
@@ -1181,11 +1208,7 @@ class Issue < ActiveRecord::Base
   end
 
   def last_notes
-    if @last_notes
-      @last_notes
-    else
-      journals.visible.where.not(notes: '').reorder(:id => :desc).first.try(:notes)
-    end
+    @last_notes || journals.visible.where.not(notes: '').reorder(:id => :desc).first.try(:notes)
   end
 
   # Preloads relations for a collection of issues
@@ -1454,7 +1477,7 @@ class Issue < ActiveRecord::Base
 
   # Returns a string of css classes that apply to the issue
   def css_classes(user=User.current)
-    s = +"issue tracker-#{tracker_id} status-#{status_id} #{priority.try(:css_classes)}"
+    s = "issue tracker-#{tracker_id} status-#{status_id} #{priority.try(:css_classes)}"
     s << ' closed' if closed?
     s << ' overdue' if overdue?
     s << ' child' if child?
@@ -2054,7 +2077,7 @@ class Issue < ActiveRecord::Base
 
   def add_auto_watcher
     if author&.active? &&
-        author&.allowed_to?(:add_issue_watchers, project) &&
+        author.allowed_to?(:add_issue_watchers, project) &&
         author.pref.auto_watch_on?('issue_created') &&
         self.watcher_user_ids.exclude?(author.id)
       self.set_watcher(author, true)
@@ -2072,7 +2095,7 @@ class Issue < ActiveRecord::Base
       tracker.disabled_core_fields.each do |attribute|
         send :"#{attribute}=", nil
       end
-      self.priority_id ||= IssuePriority.default&.id || IssuePriority.active.first.id
+      self.priority_id ||= IssuePriority.default&.id || IssuePriority.active.first&.id
       self.done_ratio ||= 0
     end
   end

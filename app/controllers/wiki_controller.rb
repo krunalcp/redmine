@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -240,6 +240,7 @@ class WikiController < ApplicationController
     # don't load text
     @versions = @page.content.versions.
       select("id, author_id, comments, updated_on, version").
+      preload(:author).
       reorder('version DESC').
       limit(@version_pages.per_page + 1).
       offset(@version_pages.offset).

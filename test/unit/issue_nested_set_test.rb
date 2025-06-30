@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,12 +20,6 @@
 require_relative '../test_helper'
 
 class IssueNestedSetTest < ActiveSupport::TestCase
-  fixtures :projects, :users, :roles,
-           :trackers, :projects_trackers,
-           :issue_statuses, :issue_categories, :issue_relations,
-           :enumerations,
-           :issues
-
   def setup
     User.current = nil
   end

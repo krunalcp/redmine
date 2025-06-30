@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -440,7 +440,7 @@ module Redmine
 
         private
 
-        def git_cmd(args, options = {}, &block)
+        def git_cmd(args, options = {}, &)
           repo_path = root_url || url
           full_args = ['--git-dir', repo_path]
           if self.class.client_version_above?([1, 7, 2])
@@ -452,7 +452,7 @@ module Redmine
             shellout(
               self.class.sq_bin + ' ' + full_args.map {|e| shell_quote e.to_s}.join(' '),
               options,
-              &block
+              &
             )
           if $? && $?.exitstatus != 0
             raise ScmCommandAborted, "git exited with non-zero status: #{$?.exitstatus}"

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -22,11 +22,6 @@ require_relative '../application_system_test_case'
 Capybara.default_max_wait_time = 2
 
 class TimelogTest < ApplicationSystemTestCase
-  fixtures :projects, :users, :email_addresses, :roles, :members, :member_roles,
-           :trackers, :projects_trackers, :enabled_modules, :issue_statuses, :issues,
-           :enumerations, :custom_fields, :custom_values, :custom_fields_trackers,
-           :time_entries
-
   def test_changing_project_should_update_activities
     project = Project.find(1)
     TimeEntryActivity.create!(:name => 'Design', :project => project, :parent => TimeEntryActivity.find_by_name('Design'), :active => false)
@@ -54,7 +49,9 @@ class TimelogTest < ApplicationSystemTestCase
     select 'QA', :from => 'Activity'
     page.first(:button, 'Submit').click
 
-    entries = TimeEntry.where(:id => [1,2,3]).to_a
+    assert_text 'Successful update.'
+
+    entries = TimeEntry.where(:id => [1, 2, 3]).to_a
     assert entries.all? {|entry| entry.hours == 8.5}
     assert entries.all? {|entry| entry.activity.name == 'QA'}
   end
@@ -70,7 +67,7 @@ class TimelogTest < ApplicationSystemTestCase
     page.first(:button, 'Submit').click
 
     assert_current_path "/projects/ecookbook/time_entries"
-    entries = TimeEntry.where(:id => [1,2,3]).to_a
+    entries = TimeEntry.where(:id => [1, 2, 3]).to_a
     assert entries.all? {|entry| entry.hours == 7.0}
   end
 
@@ -94,6 +91,7 @@ class TimelogTest < ApplicationSystemTestCase
     select 'Tracker', :from => 'Available Columns'
     page.first('input[type=button].move-right').click
     click_on 'Save'
+    assert_text 'Successful update.'
 
     # Display the list with updated settings
     visit '/time_entries'

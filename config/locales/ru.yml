@@ -214,12 +214,13 @@ ru:
         must_contain_digits: "должен содержать цифры (0-9)"
         must_contain_special_chars: "должен содержать специальные символы (!, $, %, ...)"
         domain_not_allowed: "содержит запрещенный домен (%{domain})"
+        too_simple: "is too simple"
 
   support:
     array:
-      # Rails 2.2
-      sentence_connector: "и"
-      skip_last_comma: true
+      last_word_connector: " и "
+      two_words_connector: " и "
+      words_connector: ", "
 
       # Rails 2.3
       words_connector: ", "
@@ -297,7 +298,7 @@ ru:
 
   error_can_not_remove_role: Эта роль используется и не может быть удалена.
   error_can_not_delete_custom_field: Невозможно удалить настраиваемое поле
-  error_can_not_delete_tracker: Этот трекер содержит задачи и не может быть удален.
+  error_can_not_delete_tracker_html: Этот трекер содержит задачи и не может быть удален.<p>The following projects have issues with this tracker:<br>%{projects}</p>
   error_can_t_load_default_data: "Конфигурация по умолчанию не была загружена: %{value}"
   error_issue_not_found_in_project: Задача не была найдена или не прикреплена к этому проекту
   error_scm_annotate: "Данные отсутствуют или не могут быть подписаны."
@@ -440,7 +441,6 @@ ru:
   label_board_new: Новый форум
   label_board_plural: Форумы
   label_boolean: Логический
-  label_browse: Обзор
   label_bulk_edit_selected_issues: Редактировать все выбранные задачи
   label_calendar: Календарь
   label_change_plural: Правки
@@ -1557,3 +1557,47 @@ ru:
   field_name_or_email_or_login: Имя, email или логин
   text_default_active_job_queue_changed: Изменен адаптер очереди по умолчанию, который хорошо подходит только для разработки/тестирования
   label_option_auto_lang: auto
+  label_issue_attachment_added: Attachment added
+  field_estimated_remaining_hours: Estimated remaining time
+  field_last_activity_date: Last activity
+  setting_issue_done_ratio_interval: Done ratio options interval
+  setting_copy_attachments_on_issue_copy: Copy attachments on copy
+  field_thousands_delimiter: Thousands delimiter
+  label_involved_principals: Author / Previous assignee
+  label_attachment_summary:
+    zero: "%{filename}"
+    one: "%{filename} and 1 file"
+    other: "%{filename} and %{count} files"
+  setting_wiki_tablesort_enabled: Javascript based table sorting in wiki content
+  label_progressbar: Progress bar
+  error_spent_on_closed_issue: Cannot log time on a closed issue
+  setting_timelog_accept_closed_issues: Accept time logs on closed issues
+  setting_related_issues_default_columns: Related and sub issues list defaults
+  setting_display_related_issues_table_headers: Show table headers
+  error_can_not_remove_role_reason_members_html: "<p>The following projects have members
+    with this role:<br>%{projects}</p>"
+  setting_reactions_enabled: Enable reactions
+  reaction_text_x_other_users:
+    one: 1 other
+    other: "%{count} others"
+  text_setting_gravatar_default_initials_html: Users' initials are sent to <a href="https://www.gravatar.com">https://www.gravatar.com</a>
+    to generate their avatars.
+  permission_view_project: View projects
+  permission_search_project: Search projects
+  permission_view_members: View project members
+  label_oauth_permission_admin: Administrate this Redmine
+  label_oauth_admin_access: Administration
+  label_oauth_application_plural: Applications
+  label_oauth_authorized_application_plural: Authorized applications
+  text_oauth_admin_permission: Full administrative access. When authorized by an Administrator,
+    this application will be able to read and write all data and impersonate other users.
+  text_oauth_admin_permission_info: This application requests full administrative access.
+    If you are an Administrator (or become one in the future), it will be able to read
+    and write all data and impersonate other users on your behalf. If you want to avoid
+    this, authorize it as a user without Administrator privileges instead.
+  text_oauth_copy_secret_now: Copy the secret to a safe place now, it will not be shown
+    again.
+  text_oauth_implicit_permissions: View your name, login and primary email address
+  text_oauth_info_scopes: Select the scopes this application may request. The application
+    will not be allowed to do more than what is selected here. It will also always be
+    limited by the roles and project memberships of the user who authorized it.

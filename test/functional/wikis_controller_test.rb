@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,8 +20,6 @@
 require_relative '../test_helper'
 
 class WikisControllerTest < Redmine::ControllerTest
-  fixtures :projects, :users, :roles, :members, :member_roles, :enabled_modules, :wikis
-
   def setup
     User.current = nil
   end
@@ -51,6 +49,6 @@ class WikisControllerTest < Redmine::ControllerTest
   def test_not_found
     @request.session[:user_id] = 1
     post :destroy, :params => {:id => 999, :confirm => 1}
-    assert_response 404
+    assert_response :not_found
   end
 end

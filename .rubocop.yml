@@ -1,8 +1,8 @@
 inherit_from: .rubocop_todo.yml
 
 AllCops:
-  TargetRubyVersion: 2.7
-  TargetRailsVersion: 7.1
+  TargetRubyVersion: 3.2
+  TargetRailsVersion: 7.2
 
   NewCops: enable
 
@@ -17,9 +17,7 @@ AllCops:
     - '**/files/**/*'
     - 'db/schema.rb'
 
-# Enable extensions
-
-require:
+plugins:
   - rubocop-performance
   - rubocop-rails
 
@@ -89,6 +87,14 @@ Lint/MissingSuper:
 Lint/SuppressedException:
   AllowComments: true
 
+Lint/UselessConstantScoping:
+  Exclude:
+    - 'app/controllers/repositories_controller.rb'
+    - 'app/models/mail_handler.rb'
+    - 'lib/redmine/acts/mentionable.rb'
+    - 'lib/redmine/asset_path.rb'
+    - 'lib/redmine/wiki_formatting/textile/redcloth3.rb'
+
 Layout/LineContinuationLeadingSpace:
   Enabled: false
 
@@ -108,7 +114,10 @@ Naming/VariableNumber:
 Naming/BinaryOperatorParameterName:
   Enabled: false
 
-Naming/PredicateName:
+Naming/PredicateMethod:
+  Enabled: false
+
+Naming/PredicatePrefix:
   Enabled: false
 
 Performance/CollectionLiteralInLoop:
@@ -129,10 +138,18 @@ Rails/ActiveSupportOnLoad:
     # TODO: Need to check the impact on plugins. Disable for now.
     - 'lib/redmine/preparation.rb'
 
+Rails/ApplicationRecord:
+  Exclude:
+    - 'db/migrate/0*.rb'
+
 Rails/BulkChangeTable:
   Exclude:
     - 'db/migrate/20120714122200_add_workflows_rule_fields.rb'
+    - 'db/migrate/20130217094251_remove_issues_default_fk_values.rb'
     - 'db/migrate/20131214094309_remove_custom_fields_min_max_length_default_values.rb'
+    - 'db/migrate/20190510070108_add_unique_id_to_import_items.rb'
+    - 'db/migrate/20200826153402_add_totp_to_user.rb'
+    - 'db/migrate/20221012135202_add_index_to_custom_values.rb'
 
 Rails/CompactBlank:
   Enabled: false
@@ -152,12 +169,22 @@ Rails/FindEach:
 Rails/HelperInstanceVariable:
   Enabled: false
 
+Rails/Output:
+  Exclude:
+    - 'config/routes.rb'
+    - 'lib/redmine/diff.rb'
+    - 'lib/redmine/diff_table.rb'
+    - 'test/unit/lib/redmine/scm/adapters/*.rb'
+
 Rails/Pluck:
   Exclude:
   # `pluck` is not available in Gemfile
   - 'Gemfile'
 
 Rails/RootPathnameMethods:
+  Enabled: false
+
+Rails/SkipsModelValidations:
   Enabled: false
 
 Rails/SquishedSQLHeredocs:
@@ -183,6 +210,9 @@ Style/AsciiComments:
     # We can not change nor remove it.
     - 'app/models/repository/git.rb'
 
+Style/BarePercentLiterals:
+  Enabled: false
+
 Style/BlockComments:
   Exclude:
     - 'lib/redmine/string_array_diff/diff.rb'
@@ -194,6 +224,9 @@ Style/BlockDelimiters:
     - 'lib/redmine/string_array_diff/diff.rb'
     - 'lib/redmine/string_array_diff/diffable.rb'
 
+Style/EmptyStringInsideInterpolation:
+  Enabled: false
+
 Style/FetchEnvVar:
   Enabled: false
 
@@ -201,7 +234,7 @@ Style/EmptyElse:
   EnforcedStyle: empty
 
 Style/FormatString:
-  EnforcedStyle: sprintf
+  Enabled: false
 
 Style/FormatStringToken:
   Enabled: false
@@ -220,6 +253,7 @@ Style/GlobalStdStream:
 
 Style/HashSyntax:
   EnforcedStyle: no_mixed_keys
+  EnforcedShorthandSyntax: either
 
 Style/HashEachMethods:
   Exclude:
@@ -234,10 +268,23 @@ Style/IdenticalConditionalBranches:
 Style/InverseMethods:
   Enabled: false
 
+Style/MultipleComparison:
+  Enabled: true
+  ComparisonsThreshold: 3
+
 Style/NegatedIfElseCondition:
   Enabled: false
 
+Style/NumericPredicate:
+  Enabled: false
+
+Style/PerlBackrefs:
+  Enabled: false
+
 Style/RaiseArgs:
+  Enabled: false
+
+Style/RedundantCondition:
   Enabled: false
 
 Style/RedundantConstantBase:

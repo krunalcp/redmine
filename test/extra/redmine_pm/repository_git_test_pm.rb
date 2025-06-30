@@ -1,7 +1,7 @@
 # frozen_string_literal: false
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -21,8 +21,6 @@ require_relative 'test_case'
 require 'tmpdir'
 
 class RedminePmTest::RepositoryGitTest < RedminePmTest::TestCase
-  fixtures :projects, :users, :members, :roles, :member_roles
-
   GIT_BIN = Redmine::Configuration['scm_git_command'] || "git"
 
   def test_anonymous_read_on_public_repo_with_permission_should_succeed

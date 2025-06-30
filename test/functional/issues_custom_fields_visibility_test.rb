@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -21,19 +21,6 @@ require_relative '../test_helper'
 
 class IssuesCustomFieldsVisibilityTest < Redmine::ControllerTest
   tests IssuesController
-  fixtures :projects,
-           :users, :email_addresses, :user_preferences,
-           :roles,
-           :members,
-           :member_roles,
-           :issue_statuses,
-           :trackers,
-           :projects_trackers,
-           :enabled_modules,
-           :enumerations,
-           :workflows,
-           :custom_fields, :custom_fields_trackers
-
   def setup
     CustomField.destroy_all
     Issue.delete_all
@@ -300,7 +287,7 @@ class IssuesCustomFieldsVisibilityTest < Redmine::ControllerTest
           }
         }
       )
-      assert_response 302
+      assert_response :found
     end
 
     assert_equal users_to_test.keys.size, ActionMailer::Base.deliveries.size
@@ -341,7 +328,7 @@ class IssuesCustomFieldsVisibilityTest < Redmine::ControllerTest
         }
       }
     )
-    assert_response 302
+    assert_response :found
     assert_equal users_to_test.keys.size, ActionMailer::Base.deliveries.size
     # tests that each user receives 1 email with the custom fields he is allowed to see only
     users_to_test.each do |user, fields|
@@ -378,10 +365,10 @@ class IssuesCustomFieldsVisibilityTest < Redmine::ControllerTest
         }
       }
     )
-    assert_response 302
+    assert_response :found
     users_to_test.each do |user, fields|
       mails = ActionMailer::Base.deliveries.select {|m| m.to.include? user.mail}
-      if (fields & [@field2, @field3]).any?
+      if fields.intersect?([@field2, @field3])
         assert_equal 1, mails.size, "User #{user.id} was not notified"
       else
         assert_equal 0, mails.size, "User #{user.id} was notified"

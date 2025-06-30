@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Redmine - project management software
-# Copyright (C) 2006-2023  Jean-Philippe Lang
+# Copyright (C) 2006-  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -20,14 +20,6 @@
 require_relative '../../test_helper'
 
 class Redmine::ApiTest::SearchTest < Redmine::ApiTest::Base
-  fixtures :projects, :projects_trackers,
-           :enabled_modules, :roles, :users, :members, :member_roles,
-           :issues, :trackers, :issue_statuses, :enumerations,
-           :workflows,
-           :custom_fields, :custom_values,
-           :custom_fields_projects, :custom_fields_trackers,
-           :repositories, :changesets
-
   test "GET /search.xml should return xml content" do
     get '/search.xml'
 
